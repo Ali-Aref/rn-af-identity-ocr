@@ -6,6 +6,12 @@ plugins {
 group = 'expo.modules.rnocrpro'
 version = '0.1.0'
 
+repositories {
+  google()
+  mavenCentral()
+  maven { url 'https://jitpack.io' }
+}
+
 android {
   namespace "expo.modules.rnocrpro"
   defaultConfig {
@@ -15,4 +21,13 @@ android {
   lintOptions {
     abortOnError false
   }
+  sourceSets {
+    main {
+      assets.srcDirs += ['src/main/assets']
+    }
+  }
+}
+
+dependencies {
+  implementation 'cz.adaptech.tesseract4android:tesseract4android:4.9.0'
 }

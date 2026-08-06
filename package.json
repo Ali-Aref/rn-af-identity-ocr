@@ -1,7 +1,7 @@
 {
   "name": "rn-ocr-pro",
   "version": "0.1.0",
-  "description": "A React native OCR module which support Perso-Arabic texts",
+  "description": "On-device Expo OCR with high-confidence Persian and Pashto support (Tesseract)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "scripts": {
@@ -10,14 +10,20 @@
     "lint": "eslint src/",
     "test": "node internal/module_scripts/test.js",
     "prepare": "node internal/module_scripts/prepare.js",
+    "download-tessdata": "bash scripts/download-tessdata.sh",
     "open:ios": "node internal/module_scripts/open-ios.js",
     "open:android": "node internal/module_scripts/open-android.js"
   },
   "keywords": [
     "react-native",
     "expo",
-    "rn-ocr-pro",
-    "RnOcrPro"
+    "ocr",
+    "tesseract",
+    "persian",
+    "farsi",
+    "pashto",
+    "perso-arabic",
+    "rn-ocr-pro"
   ],
   "repository": "https://github.com/Ali-Aref/rn-ocr-pro",
   "bugs": {
@@ -42,9 +48,17 @@
     "typescript": "^5.9.2"
   },
   "jest": {
-    "preset": "jest-expo",
+    "testEnvironment": "node",
     "roots": [
       "<rootDir>/src"
+    ],
+    "transform": {
+      "^.+\\.(js|jsx|ts|tsx)$": "babel-jest"
+    },
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js"
     ]
   },
   "peerDependencies": {
