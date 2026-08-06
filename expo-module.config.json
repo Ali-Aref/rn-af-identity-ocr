@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android"],
+  "apple": {
+    "modules": ["RnOcrProModule"]
+  },
+  "android": {
+    "modules": ["expo.modules.rnocrpro.RnOcrProModule"]
+  }
+}

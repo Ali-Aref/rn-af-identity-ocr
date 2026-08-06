@@ -1,0 +1,10 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    "paths": {
+      "rn-ocr-pro": ["../src/index"],
+      "rn-ocr-pro/*": ["../src/*"]
+    }
+  }
+}
