@@ -8,25 +8,36 @@ const escape = (p) => p.replace(/[/\\]/g, '[/\\\\]');
 
 const config = getDefaultConfig(projectRoot);
 
-// Parent module installs its own react / react-native / babel tooling for package
-// development. Keep the example on a single Expo SDK 57 / RN 0.86.2 singleton.
-config.resolver.blockList = [
-  ...Array.from(config.resolver.blockList ?? []),
-  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/react'))}/`),
-  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/react-native'))}/`),
-  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/@react-native'))}/`),
-  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/babel-preset-expo'))}/`),
+// Watch the parent Expo module so local src/ changes hot-reload.
+config.watchFolders = [workspaceRoot];
+
+// Parent package files live above example/. Hierarchical lookup would resolve
+// `expo` / `react-native` from ../node_modules and install a second copy of the
+// Expo runtime globals → Hermes "TypeError: property is not writable".
+config.resolver.disableHierarchicalLookup = true;
+config.resolver.nodeModulesPaths = [
+  path.resolve(projectRoot, 'node_modules'),
+  // pnpm puts transitive deps here
+  path.resolve(projectRoot, 'node_modules/.pnpm/node_modules'),
 ];
 
-config.resolver.nodeModulesPaths = [path.resolve(projectRoot, 'node_modules')];
+const singleton = (name) => path.resolve(projectRoot, 'node_modules', name);
 
 config.resolver.extraNodeModules = {
   'rn-ocr-pro': workspaceRoot,
-  react: path.resolve(projectRoot, 'node_modules/react'),
-  'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
+  react: singleton('react'),
+  'react-native': singleton('react-native'),
+  expo: singleton('expo'),
 };
 
-config.watchFolders = [workspaceRoot];
+config.resolver.blockList = [
+  ...Array.from(config.resolver.blockList ?? []),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/react'))}[/\\\\].*`),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/react-native'))}[/\\\\].*`),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/expo'))}[/\\\\].*`),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/babel-preset-expo'))}[/\\\\].*`),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/@react-native'))}[/\\\\].*`),
+];
 
 config.transformer.getTransformOptions = async () => ({
   transform: {

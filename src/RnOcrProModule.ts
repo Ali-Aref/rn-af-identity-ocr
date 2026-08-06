@@ -1,6 +1,6 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { requireNativeModule } from 'expo';
 
-import type { NativeOcrResult, OcrRecognizeOptions } from './RnOcrPro.types';
+import type { NativeOcrResult } from './RnOcrPro.types';
 
 type NativeRecognizeOptions = {
   languages: string[];
@@ -9,10 +9,16 @@ type NativeRecognizeOptions = {
   minConfidence: number;
 };
 
-declare class RnOcrProModule extends NativeModule {
+type RnOcrProNativeModule = {
   recognizeAsync(imageUri: string, options: NativeRecognizeOptions): Promise<NativeOcrResult>;
+};
+
+// Lazy: avoid evaluating the native binding at import time during Metro/HMR setup.
+let nativeModule: RnOcrProNativeModule | null = null;
+
+export default function getRnOcrProModule(): RnOcrProNativeModule {
+  if (!nativeModule) {
+    nativeModule = requireNativeModule<RnOcrProNativeModule>('RnOcrPro');
+  }
+  return nativeModule;
 }
-
-export default requireNativeModule<RnOcrProModule>('RnOcrPro');
-
-export type { OcrRecognizeOptions };

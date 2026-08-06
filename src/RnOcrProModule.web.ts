@@ -18,4 +18,8 @@ class RnOcrProModule extends NativeModule {
   }
 }
 
-export default registerWebModule(RnOcrProModule, 'RnOcrProModule');
+const Native = registerWebModule(RnOcrProModule, 'RnOcrProModule');
+
+export default function getRnOcrProModule() {
+  return Native;
+}

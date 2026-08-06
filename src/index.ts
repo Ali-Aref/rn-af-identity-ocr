@@ -1,5 +1,5 @@
 import type { OcrBlock, OcrLine, OcrRecognizeOptions, OcrResult } from './RnOcrPro.types';
-import RnOcrProModule from './RnOcrProModule';
+import getRnOcrProModule from './RnOcrProModule';
 import { DEFAULT_OCR_LANGUAGES } from './constants';
 import { normalizePersoArabicText } from './normalizePersoArabic';
 
@@ -37,7 +37,7 @@ export async function recognizeAsync(
   const languages = options.languages?.length ? options.languages : [...DEFAULT_OCR_LANGUAGES];
   const normalize = options.normalizePersoArabic !== false;
 
-  const raw = await RnOcrProModule.recognizeAsync(imageUri, {
+  const raw = await getRnOcrProModule().recognizeAsync(imageUri, {
     languages,
     psm: options.psm ?? 3,
     oem: options.oem ?? 1,
