@@ -4,6 +4,8 @@
   "main": "index.ts",
   "dependencies": {
     "expo": "~57.0.10",
+    "expo-camera": "~57.0.3",
+    "expo-image-picker": "~57.0.8",
     "react": "19.2.3",
     "react-native": "0.86.2"
   },

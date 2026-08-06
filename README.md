@@ -184,7 +184,7 @@ pnpm install
 pnpm android   # or pnpm ios
 ```
 
-Paste a local image URI and tap **Recognize**. The demo uses `fas+pus+eng` with Perso-Arabic normalization.
+Use **Gallery** or **Camera** to choose an image, then tap **Recognize**. The demo uses `fas+pus+eng` with Perso-Arabic normalization.
 
 ---
 

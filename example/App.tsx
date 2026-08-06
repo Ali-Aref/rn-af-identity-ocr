@@ -1,28 +1,80 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Button,
+  Image,
+  Modal,
   SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
 import { recognizeAsync, type OcrResult } from 'rn-ocr-pro';
 
 export default function App() {
-  const [imageUri, setImageUri] = useState('');
+  const cameraRef = useRef<CameraView>(null);
+  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<OcrResult | null>(null);
+  const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+
+  const selectImage = (uri: string) => {
+    setImageUri(uri);
+    setResult(null);
+    setError(null);
+  };
+
+  const onPickGallery = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError('Photo library permission is required.');
+      return;
+    }
+
+    const picked = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+    });
+    if (!picked.canceled && picked.assets[0]?.uri) {
+      selectImage(picked.assets[0].uri);
+    }
+  };
+
+  const onOpenCamera = async () => {
+    if (!cameraPermission?.granted) {
+      const next = await requestCameraPermission();
+      if (!next.granted) {
+        setError('Camera permission is required.');
+        return;
+      }
+    }
+    setError(null);
+    setShowCamera(true);
+  };
+
+  const onCapture = async () => {
+    const photo = await cameraRef.current?.takePictureAsync({
+      quality: 1,
+      shutterSound: false,
+    });
+    if (photo?.uri) {
+      selectImage(photo.uri);
+      setShowCamera(false);
+    }
+  };
 
   const onRecognize = async () => {
+    if (!imageUri) return;
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      const next = await recognizeAsync(imageUri.trim(), {
+      const next = await recognizeAsync(imageUri, {
         languages: ['fas', 'pus', 'eng'],
         normalizePersoArabic: true,
       });
@@ -39,23 +91,31 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.header}>rn-ocr-pro</Text>
         <Text style={styles.sub}>
-          On-device OCR (Persian / Pashto / English). Paste a file:// or content://
-          image URI, then run recognition.
+          On-device OCR (Persian / Pashto / English). Pick a photo or capture with
+          the camera, then run recognition.
         </Text>
 
-        <TextInput
-          style={styles.input}
-          autoCapitalize="none"
-          autoCorrect={false}
-          placeholder="file:///path/to/image.jpg"
-          value={imageUri}
-          onChangeText={setImageUri}
-        />
+        <View style={styles.row}>
+          <View style={styles.rowBtn}>
+            <Button title="Gallery" onPress={onPickGallery} disabled={loading} />
+          </View>
+          <View style={styles.rowBtn}>
+            <Button title="Camera" onPress={onOpenCamera} disabled={loading} />
+          </View>
+        </View>
+
+        {imageUri ? (
+          <Image source={{ uri: imageUri }} style={styles.preview} resizeMode="contain" />
+        ) : (
+          <View style={styles.previewPlaceholder}>
+            <Text style={styles.placeholderText}>No image selected</Text>
+          </View>
+        )}
 
         <Button
           title={loading ? 'Recognizing…' : 'Recognize'}
           onPress={onRecognize}
-          disabled={loading || !imageUri.trim()}
+          disabled={loading || !imageUri}
         />
 
         {loading ? <ActivityIndicator style={styles.spinner} /> : null}
@@ -72,6 +132,16 @@ export default function App() {
           </View>
         ) : null}
       </ScrollView>
+
+      <Modal visible={showCamera} animationType="slide">
+        <SafeAreaView style={styles.cameraScreen}>
+          <CameraView ref={cameraRef} style={styles.camera} facing="back" />
+          <View style={styles.cameraActions}>
+            <Button title="Cancel" onPress={() => setShowCamera(false)} />
+            <Button title="Capture" onPress={onCapture} />
+          </View>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -81,13 +151,23 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 12 },
   header: { fontSize: 28, fontWeight: '700' },
   sub: { color: '#444', marginBottom: 8 },
-  input: {
-    backgroundColor: '#fff',
+  row: { flexDirection: 'row', gap: 12 },
+  rowBtn: { flex: 1 },
+  preview: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#ddd',
     borderRadius: 8,
-    padding: 12,
-    borderWidth: 1,
-    borderColor: '#ccc',
   },
+  previewPlaceholder: {
+    width: '100%',
+    height: 220,
+    backgroundColor: '#ddd',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  placeholderText: { color: '#666' },
   spinner: { marginTop: 12 },
   error: { color: '#b00020', marginTop: 8 },
   card: {
@@ -104,5 +184,13 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     writingDirection: 'rtl',
     textAlign: 'right',
+  },
+  cameraScreen: { flex: 1, backgroundColor: '#000' },
+  camera: { flex: 1 },
+  cameraActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 16,
+    backgroundColor: '#111',
   },
 });
