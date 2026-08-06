@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
+    "babel-preset-expo": "~57.0.5",
     "expo": "~57.0.10",
     "expo-camera": "~57.0.3",
     "expo-image-picker": "~57.0.8",

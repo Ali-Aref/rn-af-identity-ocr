@@ -2,28 +2,31 @@
 const { getDefaultConfig } = require('expo/metro-config');
 const path = require('path');
 
-const config = getDefaultConfig(__dirname);
+const projectRoot = __dirname;
+const workspaceRoot = path.resolve(projectRoot, '..');
+const escape = (p) => p.replace(/[/\\]/g, '[/\\\\]');
 
-// npm v7+ will install ../node_modules/react and ../node_modules/react-native because of peerDependencies.
-// To prevent the incompatible react-native between ./node_modules/react-native and ../node_modules/react-native,
-// excludes the one from the parent folder when bundling.
+const config = getDefaultConfig(projectRoot);
+
+// Parent module installs its own react / react-native / babel tooling for package
+// development. Keep the example on a single Expo SDK 57 / RN 0.86.2 singleton.
 config.resolver.blockList = [
   ...Array.from(config.resolver.blockList ?? []),
-  // On windows the path will resolve with `\`. We need to escape it with `\\` for the RegExp.
-  new RegExp(path.resolve('..', 'node_modules', 'react').replace(/\\/g, '\\\\')),
-  new RegExp(path.resolve('..', 'node_modules', 'react-native').replace(/\\/g, '\\\\')),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/react'))}/`),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/react-native'))}/`),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/@react-native'))}/`),
+  new RegExp(`${escape(path.join(workspaceRoot, 'node_modules/babel-preset-expo'))}/`),
 ];
 
-config.resolver.nodeModulesPaths = [
-  path.resolve(__dirname, './node_modules'),
-  path.resolve(__dirname, '../node_modules'),
-];
+config.resolver.nodeModulesPaths = [path.resolve(projectRoot, 'node_modules')];
 
 config.resolver.extraNodeModules = {
-  'rn-ocr-pro': '..',
+  'rn-ocr-pro': workspaceRoot,
+  react: path.resolve(projectRoot, 'node_modules/react'),
+  'react-native': path.resolve(projectRoot, 'node_modules/react-native'),
 };
 
-config.watchFolders = [path.resolve(__dirname, '..')];
+config.watchFolders = [workspaceRoot];
 
 config.transformer.getTransformOptions = async () => ({
   transform: {
