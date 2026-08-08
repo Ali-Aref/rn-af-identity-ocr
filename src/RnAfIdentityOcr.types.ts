@@ -46,4 +46,10 @@ export type ScanResult = OcrResult & {
   documentType: AfDocumentType;
 };
 
+/** Options shared by all document scanners. */
+export type ScanOptions = {
+  /** Native grayscale+threshold before OCR. Default `true`. */
+  manipulateColors?: boolean;
+};
+
 export type NativeOcrResult = OcrResult;

@@ -3,6 +3,7 @@ import type {
   OcrBlock,
   OcrLine,
   OcrResult,
+  ScanOptions,
   ScanResult,
 } from './RnAfIdentityOcr.types';
 import getRnAfIdentityOcrModule from './RnAfIdentityOcrModule';
@@ -35,22 +36,24 @@ function mapBlock(block: OcrBlock, normalize: boolean, normalizeDigits: boolean)
   };
 }
 
-/** Internal: native OCR + Perso-Arabic normalize. Always binarizes for ID scans. */
+/** Internal: native OCR + Perso-Arabic normalize. */
 async function recognizeForDocument(
   imageUri: string,
-  documentType: AfDocumentType
+  documentType: AfDocumentType,
+  options: ScanOptions = {}
 ): Promise<ScanResult> {
   if (!imageUri || typeof imageUri !== 'string') {
     throw new Error('rn-af-identity-ocr: imageUri must be a non-empty string');
   }
 
+  const manipulateColors = options.manipulateColors !== false;
   const languages = [...DOC_LANGUAGES[documentType]];
   const raw = await getRnAfIdentityOcrModule().recognizeAsync(imageUri, {
     languages,
     psm: 3,
     oem: 1,
     minConfidence: 0,
-    binarize: true,
+    binarize: manipulateColors,
     maxDimension: 2000,
   });
 
@@ -63,20 +66,32 @@ async function recognizeForDocument(
   return { ...normalized, documentType };
 }
 
-export function scanETazkiraFront(imageUri: string): Promise<ScanResult> {
-  return recognizeForDocument(imageUri, 'e_tazkira_front');
+export function scanETazkiraFront(
+  imageUri: string,
+  options?: ScanOptions
+): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'e_tazkira_front', options);
 }
 
-export function scanETazkiraBack(imageUri: string): Promise<ScanResult> {
-  return recognizeForDocument(imageUri, 'e_tazkira_back');
+export function scanETazkiraBack(
+  imageUri: string,
+  options?: ScanOptions
+): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'e_tazkira_back', options);
 }
 
-export function scanPaperTazkira(imageUri: string): Promise<ScanResult> {
-  return recognizeForDocument(imageUri, 'paper_tazkira');
+export function scanPaperTazkira(
+  imageUri: string,
+  options?: ScanOptions
+): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'paper_tazkira', options);
 }
 
-export function scanPassport(imageUri: string): Promise<ScanResult> {
-  return recognizeForDocument(imageUri, 'passport');
+export function scanPassport(
+  imageUri: string,
+  options?: ScanOptions
+): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'passport', options);
 }
 
 const RnAfIdentityOcr = {

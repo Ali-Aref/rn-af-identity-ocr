@@ -1,9 +1,23 @@
 # Adding OCR languages
 
 `rn-af-identity-ocr` uses **Tesseract** language packs (`.traineddata` files).  
-Document scanners load packs automatically (`fas` / `pus` / `eng`). Extra languages are only needed if you extend the engine.
+Document scanners load packs automatically. Extra languages are only needed if you extend the engine.
 
 Bundled by default: **`fas`** (Persian), **`pus`** (Pashto), **`eng`** (English).
+
+---
+
+## What each scanner uses
+
+| API | Languages (order) |
+|-----|-------------------|
+| `scanETazkiraFront` | `fas` + `pus` + `eng` |
+| `scanETazkiraBack` | `fas` + `pus` + `eng` |
+| `scanPaperTazkira` | `fas` + `pus` + `eng` |
+| `scanPassport` | `eng` + `fas` + `pus` |
+
+These sets are fixed in the public API (not changed by `ScanOptions`).  
+`ScanOptions.manipulateColors` only toggles native B&W preprocess — it does not change languages. See the [README](../README.md#scanoptions).
 
 ---
 
@@ -38,7 +52,7 @@ npx expo run:android
 
 ### 3. Use it
 
-The public scan APIs use fixed language sets. To try an extra language you must extend native/JS options in a fork, or copy the model for a custom call path.
+The public scan APIs use the fixed language sets above. To try an extra language you must extend native/JS options in a fork, or copy the model for a custom call path.
 
 For host-app-only models, place `xx.traineddata` where the native layer looks:
 
@@ -67,6 +81,6 @@ The download script pulls from **tessdata_fast**. Each pack increases app size (
 
 ## See also
 
-- [README.md](../README.md) — install, scan APIs, troubleshooting
+- [README.md](../README.md) — install, scan APIs, `ScanOptions`, troubleshooting
 - [tessdata/README.md](../tessdata/README.md)
 - [scripts/download-tessdata.sh](../scripts/download-tessdata.sh)

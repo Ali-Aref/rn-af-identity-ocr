@@ -6,7 +6,7 @@ On-device OCR for **Afghan identity documents** in React Native / Expo:
 - Paper Tazkira
 - Afghan passport
 
-Uses **Tesseract** (`fas` / `pus` / `eng`) with **native black-and-white preprocessing** (grayscale + threshold) before recognition. Fully offline — no API calls.
+Uses **Tesseract** (`fas` / `pus` / `eng`) with optional **native black-and-white preprocessing** (grayscale + threshold; on by default via `manipulateColors`). Fully offline — no API calls.
 
 > Requires a **development build** / `expo prebuild`. Not available in Expo Go or on web.
 
@@ -53,25 +53,41 @@ const front = await scanETazkiraFront(imageUri);
 console.log(front.documentType); // 'e_tazkira_front'
 console.log(front.fullText);
 console.log(front.meanConfidence);
+
+// Skip native B&W when color cues matter:
+await scanPassport(imageUri, { manipulateColors: false });
 ```
 
 Each scanner:
 
 1. Downscales large images (max side 2000px)
-2. Converts to **black text on white** on native
-3. Runs Tesseract OCR
+2. Optionally converts to **black text on white** on native (`manipulateColors`, default `true`)
+3. Runs Tesseract OCR with the document’s language set
 4. Applies Perso-Arabic text normalization
 
 ---
 
 ## API
 
-| Function | `documentType` |
-|----------|----------------|
-| `scanETazkiraFront(uri)` | `e_tazkira_front` |
-| `scanETazkiraBack(uri)` | `e_tazkira_back` |
-| `scanPaperTazkira(uri)` | `paper_tazkira` |
-| `scanPassport(uri)` | `passport` |
+| Function | `documentType` | Languages |
+|----------|----------------|-----------|
+| `scanETazkiraFront(uri, options?)` | `e_tazkira_front` | `fas+pus+eng` |
+| `scanETazkiraBack(uri, options?)` | `e_tazkira_back` | `fas+pus+eng` |
+| `scanPaperTazkira(uri, options?)` | `paper_tazkira` | `fas+pus+eng` |
+| `scanPassport(uri, options?)` | `passport` | `eng+fas+pus` |
+
+### `ScanOptions`
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `manipulateColors` | `true` | Native B&W (grayscale + threshold) before OCR. Pass `false` to leave the image colors as-is. |
+
+```ts
+await scanETazkiraFront(uri, { manipulateColors: false });
+await scanETazkiraBack(uri, { manipulateColors: false });
+await scanPaperTazkira(uri, { manipulateColors: false });
+await scanPassport(uri, { manipulateColors: false });
+```
 
 ### `ScanResult`
 
@@ -85,9 +101,13 @@ type ScanResult = {
   languagesUsed: string[];
   durationMs: number;
 };
+
+type ScanOptions = {
+  manipulateColors?: boolean; // default true
+};
 ```
 
-Also exported: `normalizePersoArabicText`, `DEFAULT_OCR_LANGUAGES`, types.
+Also exported: `normalizePersoArabicText`, `DEFAULT_OCR_LANGUAGES`, types (`AfDocumentType`, `ScanResult`, `ScanOptions`, …).
 
 `imageUri` must be a local `file://` or `content://` URI.
 
@@ -95,9 +115,14 @@ Also exported: `normalizePersoArabicText`, `DEFAULT_OCR_LANGUAGES`, types.
 
 ## Languages
 
-Default models: Persian (`fas`), Pashto (`pus`), English (`eng`).
+Bundled models: Persian (`fas`), Pashto (`pus`), English (`eng`).
 
-Passport scans prefer `eng+fas+pus`. Other document types use `fas+pus+eng`.
+| Scanners | Tesseract lang string |
+|----------|------------------------|
+| e-Tazkira front/back, paper Tazkira | `fas+pus+eng` |
+| Passport | `eng+fas+pus` (same packs; English first) |
+
+Language sets are fixed per scanner in V1 (not configurable via `ScanOptions`).
 
 **Adding more languages:** see **[docs/ADDING_LANGUAGES.md](docs/ADDING_LANGUAGES.md)**.
 
@@ -107,7 +132,8 @@ Passport scans prefer `eng+fas+pus`. Other document types use `fas+pus+eng`.
 
 - Sharp, well-lit photos; crop to the document when possible
 - Keep the card/passport roughly upright
-- Native B&W helps printed black text; very low-contrast stamps may still be weak
+- Default B&W (`manipulateColors: true`) helps printed black text; try `false` if color/contrast stamps matter more
+- Very low-contrast stamps may still be weak either way
 
 ---
 
@@ -125,11 +151,13 @@ Pick a document type, then Gallery or Camera, then **Scan**.
 
 ## Platform notes
 
-| Platform | Engine | Preprocess |
-|----------|--------|------------|
+| Platform | Engine | Preprocess (`manipulateColors: true`) |
+|----------|--------|----------------------------------------|
 | Android | Tesseract4Android | Luminance + threshold |
 | iOS | kta-tesseract-swift | Grayscale + threshold |
 | Web | — | Unsupported |
+
+When `manipulateColors: false`, the (possibly downscaled) decoded image is passed to Tesseract without B&W conversion.
 
 ---
 
