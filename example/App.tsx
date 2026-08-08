@@ -159,6 +159,16 @@ export default function App() {
             <Text>languages: {result.languagesUsed.join('+')}</Text>
             <Text>mean confidence: {result.meanConfidence.toFixed(1)}</Text>
             <Text>duration: {Math.round(result.durationMs)} ms</Text>
+            {result.processedImageUri ? (
+              <>
+                <Text style={styles.sectionLabel}>Processed (sent to OCR)</Text>
+                <Image
+                  source={{ uri: result.processedImageUri }}
+                  style={styles.preview}
+                  resizeMode="contain"
+                />
+              </>
+            ) : null}
             <Text style={styles.ocrText}>{result.fullText || '(empty)'}</Text>
           </View>
         ) : null}

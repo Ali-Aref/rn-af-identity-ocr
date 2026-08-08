@@ -30,6 +30,7 @@ public class RnAfIdentityOcrModule: Module {
     if binarize {
       image = toBlackAndWhite(image)
     }
+    let processedImageUri = try saveProcessedImage(image)
 
     let tessdataDir = try ensureTessdata(languages: languages)
     let dataSource = DirectoryLanguageModelDataSource(path: tessdataDir.path)
@@ -106,8 +107,20 @@ public class RnAfIdentityOcrModule: Module {
         "engine": "tesseract",
         "languagesUsed": languages,
         "durationMs": durationMs,
+        "processedImageUri": processedImageUri,
       ]
     }
+  }
+
+  /// Cache PNG of the image Tesseract will see (debug / compare preprocess).
+  private func saveProcessedImage(_ image: UIImage) throws -> String {
+    guard let data = image.pngData() else {
+      throw OcrException("Failed to encode processed OCR image")
+    }
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("rn-af-identity-ocr-\(Int(Date().timeIntervalSince1970 * 1000)).png")
+    try data.write(to: url, options: .atomic)
+    return url.absoluteString
   }
 
   /// Grayscale + fixed threshold → black text on white.

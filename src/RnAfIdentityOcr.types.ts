@@ -40,6 +40,8 @@ export type OcrResult = {
   engine: 'tesseract';
   languagesUsed: OcrLanguageCode[];
   durationMs: number;
+  /** Local `file://` URI of the image actually sent to Tesseract (after downscale + optional B&W). */
+  processedImageUri: string | null;
 };
 
 export type ScanResult = OcrResult & {

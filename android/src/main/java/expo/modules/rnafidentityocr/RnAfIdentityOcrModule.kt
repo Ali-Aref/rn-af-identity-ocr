@@ -50,6 +50,7 @@ class RnAfIdentityOcrModule : Module() {
         bitmap = processed
       }
     }
+    val processedImageUri = saveProcessedBitmap(bitmap)
 
     val api = TessBaseAPI()
     try {
@@ -72,7 +73,8 @@ class RnAfIdentityOcrModule : Module() {
         "meanConfidence" to meanConfidence,
         "engine" to "tesseract",
         "languagesUsed" to languages,
-        "durationMs" to (System.currentTimeMillis() - started).toDouble()
+        "durationMs" to (System.currentTimeMillis() - started).toDouble(),
+        "processedImageUri" to processedImageUri
       )
     } finally {
       api.recycle()
@@ -80,6 +82,18 @@ class RnAfIdentityOcrModule : Module() {
         bitmap.recycle()
       }
     }
+  }
+
+  /** Cache PNG of the bitmap Tesseract will see (debug / compare preprocess). */
+  private fun saveProcessedBitmap(bitmap: Bitmap): String {
+    val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+    val file = File(context.cacheDir, "rn-af-identity-ocr-${System.currentTimeMillis()}.png")
+    FileOutputStream(file).use { out ->
+      if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
+        throw IllegalStateException("Failed to write processed OCR image")
+      }
+    }
+    return Uri.fromFile(file).toString()
   }
 
   /** Grayscale + fixed threshold → black text on white. */

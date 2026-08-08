@@ -53,6 +53,7 @@ const front = await scanETazkiraFront(imageUri);
 console.log(front.documentType); // 'e_tazkira_front'
 console.log(front.fullText);
 console.log(front.meanConfidence);
+console.log(front.processedImageUri); // file://… PNG after downscale / B&W
 
 // Skip native B&W when color cues matter:
 await scanPassport(imageUri, { manipulateColors: false });
@@ -62,8 +63,11 @@ Each scanner:
 
 1. Downscales large images (max side 2000px)
 2. Optionally converts to **black text on white** on native (`manipulateColors`, default `true`)
-3. Runs Tesseract OCR with the document’s language set
-4. Applies Perso-Arabic text normalization
+3. Writes that preprocessed image to cache and returns its URI as `processedImageUri`
+4. Runs Tesseract OCR with the document’s language set
+5. Applies Perso-Arabic text normalization
+
+Compare your original photo to `result.processedImageUri` to see what OCR actually received.
 
 ---
 
@@ -100,6 +104,8 @@ type ScanResult = {
   engine: 'tesseract';
   languagesUsed: string[];
   durationMs: number;
+  /** Image actually sent to Tesseract (downscale + optional B&W). Inspect to debug preprocess. */
+  processedImageUri: string | null;
 };
 
 type ScanOptions = {
