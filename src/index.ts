@@ -6,14 +6,19 @@ import type {
   OcrLine,
   OcrResult,
   OcrScript,
+  PassportMrz,
   ScanOptions,
   ScanResult,
 } from './RnAfIdentityOcr.types';
 import getRnAfIdentityOcrModule from './RnAfIdentityOcrModule';
+import { locateMrz } from './mrz/locate';
+import { parseMrz } from './mrz/parse';
 import { normalizePersoArabicText } from './normalizePersoArabic';
 
 export * from './RnAfIdentityOcr.types';
 export { normalizePersoArabicText };
+export { locateMrz, normalizeMrzText } from './mrz/locate';
+export { parseMrz } from './mrz/parse';
 
 const DOC_SCRIPT: Record<AfDocumentType, OcrScript> = {
   e_tazkira_front: 'persian',
@@ -76,6 +81,12 @@ function nativeToOcrResult(raw: NativeOcrResult): OcrResult {
   };
 }
 
+function extractPassportMrz(raw: NativeOcrResult): PassportMrz | null {
+  const candidate = locateMrz(raw.lines);
+  if (!candidate) return null;
+  return parseMrz(candidate);
+}
+
 /** Internal: optional BW preprocess + scripted OCR + Perso-Arabic normalize. */
 async function recognizeForDocument(
   imageUri: string,
@@ -94,7 +105,11 @@ async function recognizeForDocument(
     maxDimension: 2000,
   });
 
-  return { ...nativeToOcrResult(raw), documentType };
+  const base: ScanResult = { ...nativeToOcrResult(raw), documentType };
+  if (documentType === 'passport') {
+    base.mrz = extractPassportMrz(raw);
+  }
+  return base;
 }
 
 export function scanETazkiraFront(imageUri: string, options?: ScanOptions): Promise<ScanResult> {

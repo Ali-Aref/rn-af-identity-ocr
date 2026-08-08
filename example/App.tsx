@@ -172,6 +172,33 @@ export default function App() {
               </>
             ) : null}
             <Text style={styles.ocrText}>{result.fullText || '(empty)'}</Text>
+            {result.documentType === 'passport' ? (
+              <View style={{ marginTop: 12, gap: 4 }}>
+                <Text style={styles.sectionLabel}>MRZ</Text>
+                {result.mrz ? (
+                  <>
+                    <Text>
+                      format: {result.mrz.format} · valid: {String(result.mrz.valid)} · conf:{' '}
+                      {result.mrz.confidence.toFixed(2)}
+                    </Text>
+                    {Object.entries(result.mrz.fields).map(([key, field]) =>
+                      field ? (
+                        <Text key={key}>
+                          {key}: {field.normalizedValue}
+                        </Text>
+                      ) : null
+                    )}
+                    {result.mrz.warnings.map((w, i) => (
+                      <Text key={i} style={styles.error}>
+                        {w.message}
+                      </Text>
+                    ))}
+                  </>
+                ) : (
+                  <Text>No MRZ located</Text>
+                )}
+              </View>
+            ) : null}
           </View>
         ) : null}
       </ScrollView>

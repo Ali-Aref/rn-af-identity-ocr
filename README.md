@@ -63,7 +63,10 @@ console.log(front.engine);       // 'ppocr'
 console.log(front.fullText);
 console.log(front.processedImageUri); // file://… after downscale / optional B&W
 
-await scanPassport(imageUri, { manipulateColors: true });
+const passport = await scanPassport(imageUri);
+console.log(passport.mrz?.fields.surname?.normalizedValue);
+console.log(passport.mrz?.fields.documentNumber?.normalizedValue);
+console.log(passport.mrz?.valid);
 ```
 
 Each scanner:
@@ -74,6 +77,7 @@ Each scanner:
 4. Writes / returns `processedImageUri` (original URI for default Latin; cache PNG when preprocessed)
 5. Runs the script-specific OCR engine
 6. Applies Perso-Arabic text normalization only for Persian-script results (Latin/MRZ left raw)
+7. **Passport only:** locates and parses the MRZ (ICAO TD3/TD1) into structured fields
 
 ---
 
@@ -109,18 +113,28 @@ type ScanResult = {
   scriptUsed: 'latin' | 'arabic' | 'persian';
   durationMs: number;
   processedImageUri: string | null;
+  /** Passport only: parsed MRZ, or null if not located. */
+  mrz?: PassportMrz | null;
 };
 
-type ScanOptions = {
-  manipulateColors?: boolean; // default false
+type PassportMrz = {
+  format: 'TD1' | 'TD3';
+  valid: boolean;
+  confidence: number; // 0..1
+  lines: string[];
+  fields: Partial<Record<MrzFieldKey, MrzField>>;
+  warnings: MrzWarning[];
 };
+
+// MRZ fields: documentNumber, surname, givenNames, nationality,
+// dateOfBirth, sex, dateOfExpiry, personalNumber
 ```
 
-Also exported: `normalizePersoArabicText`, types.
+Also exported: `normalizePersoArabicText`, `locateMrz`, `parseMrz`, types.
 
 `imageUri` must be a local `file://` or `content://` URI.
 
-This package returns **raw OCR text** (lines/blocks). Structured field extraction / MRZ parsing lives in `af-identity-scanner`.
+Passport returns raw OCR **plus** on-device MRZ parse (`mrz` npm package, check-digit autocorrect). Other document types remain raw OCR text for now.
 
 ---
 

@@ -67,6 +67,41 @@ export type OcrResult = {
 
 export type ScanResult = OcrResult & {
   documentType: AfDocumentType;
+  /** Present on passport scans when an MRZ could be located (null if not found). */
+  mrz?: PassportMrz | null;
+};
+
+export type MrzFieldKey =
+  | 'documentNumber'
+  | 'surname'
+  | 'givenNames'
+  | 'nationality'
+  | 'dateOfBirth'
+  | 'sex'
+  | 'dateOfExpiry'
+  | 'personalNumber';
+
+export type MrzField = {
+  rawValue: string;
+  normalizedValue: string;
+  /** 0..1 */
+  confidence: number;
+};
+
+export type MrzWarning = {
+  code: 'mrz_checksum_failed';
+  message: string;
+  field?: MrzFieldKey;
+};
+
+export type PassportMrz = {
+  format: 'TD1' | 'TD3';
+  valid: boolean;
+  /** 0..1 */
+  confidence: number;
+  lines: string[];
+  fields: Partial<Record<MrzFieldKey, MrzField>>;
+  warnings: MrzWarning[];
 };
 
 /** Options shared by all document scanners. */
