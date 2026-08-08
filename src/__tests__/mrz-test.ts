@@ -74,4 +74,31 @@ describe('passport MRZ locate + parse', () => {
   it('returns null when no chevron MRZ lines exist', () => {
     expect(locateMrz({ lines: linesFromMrz([], ['HELLO', 'WORLD']) })).toBeNull();
   });
+
+  it('recovers fields from OCR that used « and K for fillers (real AF passport sample)', () => {
+    // Exact ML Kit lines from a scan that previously threw in parse → empty fields.
+    const candidate = locateMrz({
+      lines: linesFromMrz([
+        'P<AFGMOHAMMADZADA<<ALI<ARE F<<<<<<«<<K<<<«KK<',
+        'PO76810009AFG9806098M3402214<<<«<<««K««K<«06',
+      ]),
+    });
+    expect(candidate?.format).toBe('TD3');
+    expect(candidate!.lines[0]).toHaveLength(44);
+    expect(candidate!.lines[1]).toHaveLength(44);
+    // Trailing composite check digits must survive (old fitLength sliced them off).
+    expect(candidate!.lines[1].endsWith('06')).toBe(true);
+
+    const parsed = parseMrz(candidate!);
+    expect(parsed.fields.documentNumber?.normalizedValue).toBe('PO7681000');
+    expect(parsed.fields.surname?.normalizedValue).toBe('MOHAMMADZADA');
+    expect(parsed.fields.givenNames?.normalizedValue).toBe('ALI AREF');
+    expect(parsed.fields.nationality?.normalizedValue).toBe('AFG');
+    expect(parsed.fields.dateOfBirth?.normalizedValue).toBe('1998-06-09');
+    expect(parsed.fields.sex?.normalizedValue).toBe('M');
+    expect(parsed.fields.dateOfExpiry?.normalizedValue).toBe('2034-02-21');
+    // Doc-number check digit in OCR is wrong (expected 1, got 9) → valid:false but fields present.
+    expect(parsed.valid).toBe(false);
+    expect(parsed.warnings.some((w) => w.code === 'mrz_checksum_failed')).toBe(true);
+  });
 });

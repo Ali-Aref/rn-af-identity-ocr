@@ -67,7 +67,9 @@ export function parseMrz(candidate: MrzCandidate): PassportMrz {
   const warnings: MrzWarning[] = [];
 
   for (const { key, mrz, checkDigit } of FIELD_MAP) {
-    const rawValue = result.fields[mrz];
+    const detail = detailFor(result, mrz);
+    // Prefer fields; fall back to detail.value when a failed check nulls the field.
+    const rawValue = result.fields[mrz] ?? detail?.value;
     if (rawValue === null || rawValue === undefined || rawValue === '') continue;
 
     let confidence: number;
@@ -82,13 +84,14 @@ export function parseMrz(candidate: MrzCandidate): PassportMrz {
         });
       }
     } else {
-      const fieldValid = detailFor(result, mrz)?.valid ?? true;
+      const fieldValid = detail?.valid ?? true;
       confidence = fieldValid ? 0.85 : 0.6;
     }
 
+    const raw = String(rawValue);
     fields[key] = {
-      rawValue,
-      normalizedValue: normalizeValue(key, rawValue),
+      rawValue: raw,
+      normalizedValue: normalizeValue(key, raw),
       confidence,
     };
   }

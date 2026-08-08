@@ -19,28 +19,52 @@ const LINE_LENGTH: Record<MrzFormat, number> = { TD1: 30, TD3: 44 };
 const LINE_COUNT: Record<MrzFormat, number> = { TD1: 3, TD3: 2 };
 
 /**
- * Uppercases, drops whitespace, maps a few unambiguous chevron lookalikes, and
- * strips anything outside the MRZ charset. Letter/digit confusions (O/0, I/1)
- * are deliberately left for the check-digit-guided autocorrect in the parser,
- * since fixing them here without context would corrupt names.
+ * Uppercases, drops whitespace, maps chevron lookalikes, and strips anything
+ * outside the MRZ charset. Letter/digit confusions (O/0, I/1) are left for the
+ * check-digit-guided autocorrect in the parser.
+ *
+ * Important: OCR often emits `«` (guillemet) for a *single* `<`. Mapping that to
+ * `<<` inflates the line past 44/30 chars; fitLength then truncates the start and
+ * chops off trailing check digits so `mrz` parse throws.
  */
 export function normalizeMrzText(text: string): string {
-  return text
+  let out = text
     .toUpperCase()
-    .replace(/«/g, '<<')
-    .replace(/[‹＜]/g, '<')
+    // Guillemet / fullwidth chevrons → one filler char (not two).
+    .replace(/[«‹＜]/g, '<')
     .replace(/\s+/g, '')
     .replace(/[^A-Z0-9<]/g, '');
+
+  // `K` next to `<` is almost always a misread chevron in the filler zone.
+  let prev = '';
+  while (out !== prev) {
+    prev = out;
+    out = out.replace(/K</g, '<<').replace(/<K/g, '<<');
+  }
+  return out;
 }
 
 function isMrzLike(text: string): boolean {
   return text.length >= 20 && text.includes('<');
 }
 
+/**
+ * Fit to TD3/TD1 width. If too long, delete extra `<` (preserve letters/digits
+ * and trailing check digits) instead of blindly slicing the prefix.
+ */
 function fitLength(text: string, length: number): string {
   if (text.length === length) return text;
-  if (text.length > length) return text.slice(0, length);
-  return text.padEnd(length, '<');
+  if (text.length < length) return text.padEnd(length, '<');
+
+  let t = text;
+  while (t.length > length) {
+    const idx = t.lastIndexOf('<');
+    if (idx === -1) {
+      return t.slice(0, length);
+    }
+    t = t.slice(0, idx) + t.slice(idx + 1);
+  }
+  return t.length < length ? t.padEnd(length, '<') : t;
 }
 
 function conf01(confidence: number): number {
