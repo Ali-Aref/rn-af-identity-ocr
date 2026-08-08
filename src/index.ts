@@ -22,24 +22,31 @@ const DOC_SCRIPT: Record<AfDocumentType, OcrScript> = {
   passport: 'latin',
 };
 
-function mapText(text: string): string {
+function mapText(text: string, script: OcrScript): string {
+  // Keep Latin / MRZ output untouched (matches af-identity-scanner recognize).
+  if (script === 'latin') return text;
   return normalizePersoArabicText(text, { normalizeDigits: true });
 }
 
-function toPixelLine(line: NativeRecognizedLine, width: number, height: number): OcrLine {
+function toPixelLine(
+  line: NativeRecognizedLine,
+  width: number,
+  height: number,
+  script: OcrScript
+): OcrLine {
   const left = line.box.x * width;
   const top = line.box.y * height;
   const right = (line.box.x + line.box.width) * width;
   const bottom = (line.box.y + line.box.height) * height;
   return {
-    text: mapText(line.text),
+    text: mapText(line.text, script),
     confidence: line.confidence * (line.confidence <= 1 ? 100 : 1),
     bbox: { left, top, right, bottom },
   };
 }
 
 function nativeToOcrResult(raw: NativeOcrResult): OcrResult {
-  const lines = raw.lines.map((line) => toPixelLine(line, raw.width, raw.height));
+  const lines = raw.lines.map((line) => toPixelLine(line, raw.width, raw.height, raw.scriptUsed));
   const meanConfidence =
     lines.length === 0 ? 0 : lines.reduce((sum, l) => sum + l.confidence, 0) / lines.length;
 

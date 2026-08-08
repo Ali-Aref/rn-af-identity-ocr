@@ -68,15 +68,12 @@ await scanPassport(imageUri, { manipulateColors: true });
 
 Each scanner:
 
-1. Downscales large images (max side 2000px)
-2. Optionally converts to **black text on white** (`manipulateColors`, default `false`)
-3. Writes that image to cache as `processedImageUri`
-4. Runs the script-specific OCR engine
-5. Applies Perso-Arabic text normalization
-
-Compare your original photo to `result.processedImageUri` to see what OCR received.
-
-**Note:** Default is color/RGB (better for PP-OCR). Pass `{ manipulateColors: true }` when you want B&W for debugging or Latin print.
+1. Routes to Latin (passport / e-Tazkira back) or Persian PP-OCR (fronts)
+2. Latin (default): full-resolution image with EXIF — same path as `af-identity-scanner` (no downscale)
+3. Optionally converts to **black text on white** when `manipulateColors: true` (then may downscale)
+4. Writes / returns `processedImageUri` (original URI for default Latin; cache PNG when preprocessed)
+5. Runs the script-specific OCR engine
+6. Applies Perso-Arabic text normalization only for Persian-script results (Latin/MRZ left raw)
 
 ---
 
@@ -137,8 +134,8 @@ See **[docs/ENGINES.md](docs/ENGINES.md)** for Latin vs Arabic details and bundl
 
 - Sharp, well-lit photos; crop to the document when possible
 - Keep the card/passport roughly upright
-- For Arabic-script fronts, default color is usually best; try `{ manipulateColors: true }` and compare `processedImageUri` if needed
-- Latin/MRZ: Vision disables language correction so it does not invent characters in document numbers
+- Passport / e-Tazkira back: leave `manipulateColors` off (default) so Latin OCR matches `af-identity-scanner`
+- For Persian fronts, try `{ manipulateColors: true }` only if color OCR is weak; compare `processedImageUri`
 
 ---
 

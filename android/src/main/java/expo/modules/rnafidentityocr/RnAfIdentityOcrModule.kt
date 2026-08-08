@@ -51,16 +51,29 @@ class RnAfIdentityOcrModule : Module() {
       val maxDimension = (options["maxDimension"] as? Number)?.toInt() ?: 2000
       val started = System.currentTimeMillis()
 
-      val prepared = try {
-        prepareBitmap(imageUri, binarize, maxDimension)
-      } catch (e: Exception) {
-        promise.reject("ERR_IMAGE_LOAD", e.message ?: "Failed to load image", e)
-        return@AsyncFunction
-      }
-
       when (script) {
-        "latin" -> recognizeLatin(prepared, started, promise)
+        "latin" -> {
+          // Match af-identity-scanner: raw URI + EXIF via fromFilePath (no downscale).
+          // Only run our bitmap preprocess when caller opts into B&W.
+          if (binarize) {
+            val prepared = try {
+              prepareBitmap(imageUri, binarize = true, maxDimension = maxDimension)
+            } catch (e: Exception) {
+              promise.reject("ERR_IMAGE_LOAD", e.message ?: "Failed to load image", e)
+              return@AsyncFunction
+            }
+            recognizeLatinFromBitmap(prepared, started, promise)
+          } else {
+            recognizeLatinFromUri(imageUri, started, promise)
+          }
+        }
         "arabic", "persian" -> {
+          val prepared = try {
+            prepareBitmap(imageUri, binarize, maxDimension)
+          } catch (e: Exception) {
+            promise.reject("ERR_IMAGE_LOAD", e.message ?: "Failed to load image", e)
+            return@AsyncFunction
+          }
           arabicExecutor.execute {
             try {
               val ocr = arabic().recognize(prepared.bitmap)
@@ -75,7 +88,6 @@ class RnAfIdentityOcrModule : Module() {
           }
         }
         else -> {
-          if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
           promise.reject(
             "ERR_UNSUPPORTED_SCRIPT",
             "Script \"$script\" is not supported. Use \"latin\", \"persian\", or \"arabic\".",
@@ -106,7 +118,49 @@ class RnAfIdentityOcrModule : Module() {
     return PreparedImage(bitmap, uri)
   }
 
-  private fun recognizeLatin(prepared: PreparedImage, started: Long, promise: Promise) {
+  /** Same path as af-identity-scanner: ML Kit applies EXIF from the file URI. */
+  private fun recognizeLatinFromUri(imageUri: String, started: Long, promise: Promise) {
+    val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+    val image = try {
+      InputImage.fromFilePath(context, Uri.parse(imageUri))
+    } catch (e: Exception) {
+      promise.reject("ERR_IMAGE_LOAD", "Failed to load image at $imageUri: ${e.message}", e)
+      return
+    }
+
+    val width = image.width
+    val height = image.height
+    if (width <= 0 || height <= 0) {
+      promise.reject("ERR_IMAGE_LOAD", "Image has invalid dimensions: ${width}x${height}", null)
+      return
+    }
+
+    latinRecognizer
+      .process(image)
+      .addOnSuccessListener { visionText ->
+        val lines = visionText.textBlocks.flatMap { it.lines }.map { line ->
+          mapOf(
+            "text" to line.text,
+            "confidence" to lineConfidence(line),
+            "box" to normalizeBox(line.boundingBox, width, height)
+          )
+        }
+        promise.resolve(
+          withMeta(
+            mapOf("lines" to lines, "width" to width, "height" to height),
+            "mlkit",
+            "latin",
+            imageUri,
+            started
+          )
+        )
+      }
+      .addOnFailureListener { e ->
+        promise.reject("ERR_OCR", "Latin text recognition failed: ${e.message}", e)
+      }
+  }
+
+  private fun recognizeLatinFromBitmap(prepared: PreparedImage, started: Long, promise: Promise) {
     val image = InputImage.fromBitmap(prepared.bitmap, 0)
     val width = image.width
     val height = image.height

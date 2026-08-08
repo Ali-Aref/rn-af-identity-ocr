@@ -15,8 +15,10 @@
 
 ## Latin
 
-- **Android:** `com.google.mlkit:text-recognition` (bundled Latin model; works without Play Services)
-- **iOS:** `VNRecognizeTextRequest` at `.accurate`, `usesLanguageCorrection = false` (avoids inventing characters on MRZ / IDs)
+- **Android:** `com.google.mlkit:text-recognition` via `InputImage.fromFilePath` (EXIF applied; **no downscale** when `manipulateColors` is off — same as `af-identity-scanner`)
+- **iOS:** `VNRecognizeTextRequest` at `.accurate`, `usesLanguageCorrection = false`, full-resolution `UIImage(contentsOfFile:)` + EXIF orientation
+
+Passport / e-Tazkira back use this path. Opting into `{ manipulateColors: true }` still runs B&W (+ optional downscale) before Latin OCR.
 
 ## Persian / Pashto (PP-OCR arabic-family)
 

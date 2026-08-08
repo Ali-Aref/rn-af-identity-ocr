@@ -16,21 +16,33 @@ public class RnAfIdentityOcrModule: Module {
       let binarize = (options["binarize"] as? Bool) ?? false
       let maxDimension = (options["maxDimension"] as? Int) ?? 2000
 
-      var image = try self.loadImage(from: imageUri)
-      image = self.downscaleIfNeeded(image, maxDimension: maxDimension)
-      if binarize {
-        image = self.toBlackAndWhite(image)
-      }
-      let processedImageUri = try self.saveProcessedImage(image)
-
       let ocr: [String: Any]
       let engine: String
+      let processedImageUri: String
+
       switch script {
       case "latin":
-        ocr = try Self.recognizeLatin(image: image)
+        // Match af-identity-scanner: full-res file + EXIF orientation into Vision.
+        // Only apply our preprocess when caller opts into B&W.
+        if binarize {
+          var image = try self.loadImage(from: imageUri)
+          image = self.downscaleIfNeeded(image, maxDimension: maxDimension)
+          image = self.toBlackAndWhite(image)
+          processedImageUri = try self.saveProcessedImage(image)
+          ocr = try Self.recognizeLatin(image: image)
+        } else {
+          ocr = try Self.recognizeLatin(uri: imageUri)
+          processedImageUri = imageUri
+        }
         engine = "vision"
       case "arabic", "persian":
         // Paddle ships Persian/Pashto in arabic_PP-OCRv5_mobile_rec (no separate persian ONNX).
+        var image = try self.loadImage(from: imageUri)
+        image = self.downscaleIfNeeded(image, maxDimension: maxDimension)
+        if binarize {
+          image = self.toBlackAndWhite(image)
+        }
+        processedImageUri = try self.saveProcessedImage(image)
         if self.arabicEngine == nil {
           self.arabicEngine = try ArabicOcrEngine()
         }
@@ -49,12 +61,31 @@ public class RnAfIdentityOcrModule: Module {
     }
   }
 
+  /// Same path as af-identity-scanner Latin OCR.
+  private static func recognizeLatin(uri: String) throws -> [String: Any] {
+    guard let url = fileURL(from: uri) else {
+      throw OcrException("Invalid image URI: \(uri)")
+    }
+    guard let image = UIImage(contentsOfFile: url.path), let cgImage = image.cgImage else {
+      throw OcrException("Failed to load image at \(uri)")
+    }
+    return try recognizeLatin(cgImage: cgImage, orientation: CGImagePropertyOrientation(image.imageOrientation))
+  }
+
   private static func recognizeLatin(image: UIImage) throws -> [String: Any] {
     guard let cgImage = image.cgImage else {
       throw OcrException("Failed to get CGImage for Latin OCR")
     }
+    return try recognizeLatin(
+      cgImage: cgImage,
+      orientation: CGImagePropertyOrientation(image.imageOrientation)
+    )
+  }
 
-    let orientation = CGImagePropertyOrientation(image.imageOrientation)
+  private static func recognizeLatin(
+    cgImage: CGImage,
+    orientation: CGImagePropertyOrientation
+  ) throws -> [String: Any] {
     let (width, height) = orientedSize(
       width: cgImage.width,
       height: cgImage.height,
@@ -92,6 +123,16 @@ public class RnAfIdentityOcrModule: Module {
       "width": width,
       "height": height,
     ]
+  }
+
+  private static func fileURL(from uri: String) -> URL? {
+    if uri.hasPrefix("file://") {
+      return URL(string: uri)
+    }
+    if uri.hasPrefix("/") {
+      return URL(fileURLWithPath: uri)
+    }
+    return URL(string: uri) ?? URL(fileURLWithPath: uri)
   }
 
   private static func orientedSize(
