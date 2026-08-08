@@ -1,0 +1,56 @@
+# Engines and models
+
+`rn-af-identity-ocr` does **not** use Tesseract. It routes by document type to one of two on-device engines (same approach as `af-identity-scanner`).
+
+## Script routing
+
+| API | Script | Engine |
+|-----|--------|--------|
+| `scanETazkiraFront` | `arabic` | PP-OCRv5 (ONNX) |
+| `scanPaperTazkira` | `arabic` | PP-OCRv5 (ONNX) |
+| `scanETazkiraBack` | `latin` | ML Kit (Android) / Vision (iOS) |
+| `scanPassport` | `latin` | ML Kit (Android) / Vision (iOS) |
+
+`ScanOptions.manipulateColors` only toggles native B&W preprocess. It does **not** change which engine runs.
+
+## Latin
+
+- **Android:** `com.google.mlkit:text-recognition` (bundled Latin model; works without Play Services)
+- **iOS:** `VNRecognizeTextRequest` at `.accurate`, `usesLanguageCorrection = false` (avoids inventing characters on MRZ / IDs)
+
+## Arabic (Dari / Pashto / Persian)
+
+Bundled **PP-OCRv5** mobile detection + arabic recognition via ONNX Runtime:
+
+| File | Role | Approx size |
+|------|------|-------------|
+| `PP-OCRv5_mobile_det.onnx` | Text detection | ~4.7 MB |
+| `arabic_PP-OCRv5_mobile_rec.onnx` | Line recognition (Arabic-script family + English) | ~7.7 MB |
+| `ppocrv5_arabic_dict.txt` | CTC charset | small |
+
+Locations in this repo:
+
+- Source / shared: [`assets/models/`](../assets/models/)
+- Android assets: `android/src/main/assets/models/`
+- iOS pod resources: `ios/models/`
+
+Detection uses a probability heatmap (axis-aligned boxes). Recognition crops each box to height 48 and CTC-decodes. RTL lines are whole-string reversed after decode.
+
+## Preprocess (this package only)
+
+Before either engine:
+
+1. Downscale longest side ≤ 2000px
+2. Optional grayscale + fixed threshold → black text on white (`manipulateColors`, default `false`)
+3. Save PNG → `processedImageUri`
+
+PP-OCR expects ImageNet-normalized RGB. Default leaves color as-is; pass `{ manipulateColors: true }` to force B&W.
+
+## Adding languages
+
+There is no tessdata download flow. Latin coverage is fixed by ML Kit / Vision. Arabic coverage is fixed by the bundled PP-OCR arabic rec model and dict. Extending scripts means swapping or fine-tuning those models in a fork — not adding `.traineddata` packs.
+
+## See also
+
+- [README.md](../README.md) — install, scan APIs, troubleshooting
+- [assets/models/README.md](../assets/models/README.md)

@@ -1,8 +1,8 @@
 Pod::Spec.new do |s|
   s.name           = 'RnAfIdentityOcr'
   s.version        = '0.1.0'
-  s.summary        = 'On-device OCR for Afghan identity documents (e-Tazkira, paper Tazkira, passport)'
-  s.description    = 'Tesseract-based on-device OCR with native B&W preprocess for Afghan ID documents; languages fas/pus/eng'
+  s.summary        = 'On-device OCR for Afghan identity documents (ML Kit/Vision + PP-OCR)'
+  s.description    = 'Latin OCR via Vision and Arabic-script OCR via PP-OCRv5 ONNX, with optional B&W preprocess'
   s.author         = 'Ali Aref'
   s.homepage       = 'https://github.com/Ali-Aref/rn-ocr-pro'
   s.platforms      = {
@@ -11,19 +11,20 @@ Pod::Spec.new do |s|
   s.source         = { git: 'https://github.com/Ali-Aref/rn-ocr-pro.git' }
   s.static_framework = true
   s.swift_version  = '5.0'
+  s.license        = 'MIT'
 
   s.dependency 'ExpoModulesCore'
-  s.dependency 'kta-tesseract-swift', '~> 0.0.7'
+  s.dependency 'onnxruntime-objc', '~> 1.20.0'
 
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
-    'OTHER_LDFLAGS' => '$(inherited) -lc++ -lz',
+    'SWIFT_OBJC_BRIDGING_HEADER' => '$(PODS_TARGET_SRCROOT)/RnAfIdentityOcr-Bridging-Header.h',
+    'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES' => 'YES',
   }
 
   s.source_files = "**/*.{h,m,mm,swift,hpp,cpp}"
-  s.exclude_files = "Resources/**"
-
-  s.resource_bundles = {
-    'RnAfIdentityOcrTessdata' => ['Resources/tessdata/*.traineddata']
-  }
+  s.exclude_files = ["RnAfIdentityOcr-Bridging-Header.h", "Resources/**"]
+  s.private_header_files = "AfOrtRunner.h"
+  # PP-OCRv5 mobile det (~4.7 MB) + arabic rec (~7.7 MB) + charset dict.
+  s.resources = ['models/*']
 end

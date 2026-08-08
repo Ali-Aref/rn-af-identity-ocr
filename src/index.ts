@@ -1,42 +1,75 @@
 import type {
   AfDocumentType,
+  NativeOcrResult,
+  NativeRecognizedLine,
   OcrBlock,
   OcrLine,
   OcrResult,
+  OcrScript,
   ScanOptions,
   ScanResult,
 } from './RnAfIdentityOcr.types';
 import getRnAfIdentityOcrModule from './RnAfIdentityOcrModule';
-import { DEFAULT_OCR_LANGUAGES } from './constants';
 import { normalizePersoArabicText } from './normalizePersoArabic';
 
 export * from './RnAfIdentityOcr.types';
-export { DEFAULT_OCR_LANGUAGES } from './constants';
 export { normalizePersoArabicText };
 
-const DOC_LANGUAGES: Record<AfDocumentType, readonly string[]> = {
-  e_tazkira_front: DEFAULT_OCR_LANGUAGES,
-  e_tazkira_back: DEFAULT_OCR_LANGUAGES,
-  paper_tazkira: DEFAULT_OCR_LANGUAGES,
-  passport: ['eng', 'fas', 'pus'],
+const DOC_SCRIPT: Record<AfDocumentType, OcrScript> = {
+  e_tazkira_front: 'arabic',
+  paper_tazkira: 'arabic',
+  e_tazkira_back: 'latin',
+  passport: 'latin',
 };
 
-function mapText(text: string, normalize: boolean, normalizeDigits: boolean): string {
-  return normalize ? normalizePersoArabicText(text, { normalizeDigits }) : text;
+function mapText(text: string): string {
+  return normalizePersoArabicText(text, { normalizeDigits: true });
 }
 
-function mapBlock(block: OcrBlock, normalize: boolean, normalizeDigits: boolean): OcrBlock {
+function toPixelLine(line: NativeRecognizedLine, width: number, height: number): OcrLine {
+  const left = line.box.x * width;
+  const top = line.box.y * height;
+  const right = (line.box.x + line.box.width) * width;
+  const bottom = (line.box.y + line.box.height) * height;
   return {
-    ...block,
-    text: mapText(block.text, normalize, normalizeDigits),
-    lines: block.lines.map((line: OcrLine): OcrLine => ({
-      ...line,
-      text: mapText(line.text, normalize, normalizeDigits),
-    })),
+    text: mapText(line.text),
+    confidence: line.confidence * (line.confidence <= 1 ? 100 : 1),
+    bbox: { left, top, right, bottom },
   };
 }
 
-/** Internal: native OCR + Perso-Arabic normalize. */
+function nativeToOcrResult(raw: NativeOcrResult): OcrResult {
+  const lines = raw.lines.map((line) => toPixelLine(line, raw.width, raw.height));
+  const meanConfidence =
+    lines.length === 0 ? 0 : lines.reduce((sum, l) => sum + l.confidence, 0) / lines.length;
+
+  const block: OcrBlock | null =
+    lines.length === 0
+      ? null
+      : {
+          text: lines.map((l) => l.text).join('\n'),
+          confidence: meanConfidence,
+          bbox: {
+            left: Math.min(...lines.map((l) => l.bbox.left)),
+            top: Math.min(...lines.map((l) => l.bbox.top)),
+            right: Math.max(...lines.map((l) => l.bbox.right)),
+            bottom: Math.max(...lines.map((l) => l.bbox.bottom)),
+          },
+          lines,
+        };
+
+  return {
+    fullText: lines.map((l) => l.text).join('\n'),
+    blocks: block ? [block] : [],
+    meanConfidence,
+    engine: raw.engine,
+    scriptUsed: raw.scriptUsed,
+    durationMs: raw.durationMs,
+    processedImageUri: raw.processedImageUri ?? null,
+  };
+}
+
+/** Internal: optional BW preprocess + scripted OCR + Perso-Arabic normalize. */
 async function recognizeForDocument(
   imageUri: string,
   documentType: AfDocumentType,
@@ -46,51 +79,30 @@ async function recognizeForDocument(
     throw new Error('rn-af-identity-ocr: imageUri must be a non-empty string');
   }
 
-  const manipulateColors = options.manipulateColors !== false;
-  const languages = [...DOC_LANGUAGES[documentType]];
+  const manipulateColors = options.manipulateColors === true;
+  const script = DOC_SCRIPT[documentType];
   const raw = await getRnAfIdentityOcrModule().recognizeAsync(imageUri, {
-    languages,
-    psm: 3,
-    oem: 1,
-    minConfidence: 0,
+    script,
     binarize: manipulateColors,
     maxDimension: 2000,
   });
 
-  const normalized: OcrResult = {
-    ...raw,
-    fullText: mapText(raw.fullText, true, true),
-    blocks: raw.blocks.map((b) => mapBlock(b, true, true)),
-  };
-
-  return { ...normalized, documentType };
+  return { ...nativeToOcrResult(raw), documentType };
 }
 
-export function scanETazkiraFront(
-  imageUri: string,
-  options?: ScanOptions
-): Promise<ScanResult> {
+export function scanETazkiraFront(imageUri: string, options?: ScanOptions): Promise<ScanResult> {
   return recognizeForDocument(imageUri, 'e_tazkira_front', options);
 }
 
-export function scanETazkiraBack(
-  imageUri: string,
-  options?: ScanOptions
-): Promise<ScanResult> {
+export function scanETazkiraBack(imageUri: string, options?: ScanOptions): Promise<ScanResult> {
   return recognizeForDocument(imageUri, 'e_tazkira_back', options);
 }
 
-export function scanPaperTazkira(
-  imageUri: string,
-  options?: ScanOptions
-): Promise<ScanResult> {
+export function scanPaperTazkira(imageUri: string, options?: ScanOptions): Promise<ScanResult> {
   return recognizeForDocument(imageUri, 'paper_tazkira', options);
 }
 
-export function scanPassport(
-  imageUri: string,
-  options?: ScanOptions
-): Promise<ScanResult> {
+export function scanPassport(imageUri: string, options?: ScanOptions): Promise<ScanResult> {
   return recognizeForDocument(imageUri, 'passport', options);
 }
 
@@ -100,7 +112,6 @@ const RnAfIdentityOcr = {
   scanPaperTazkira,
   scanPassport,
   normalizePersoArabicText,
-  DEFAULT_OCR_LANGUAGES,
 };
 
 export default RnAfIdentityOcr;

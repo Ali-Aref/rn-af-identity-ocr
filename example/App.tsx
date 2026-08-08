@@ -94,6 +94,7 @@ export default function App() {
     setResult(null);
     try {
       setResult(await entry.scan(imageUri));
+      console.log({ result })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -106,8 +107,8 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.header}>rn-af-identity-ocr</Text>
         <Text style={styles.sub}>
-          Afghan ID OCR (native B&W preprocess). Pick a document type, then gallery or
-          camera.
+          Dual-engine OCR (PP-OCR Arabic / ML Kit·Vision Latin) with optional native B&W.
+          Pick a document type, then gallery or camera. Rebuild native after engine changes.
         </Text>
 
         <Text style={styles.sectionLabel}>Document type</Text>
@@ -156,7 +157,7 @@ export default function App() {
             <Text style={styles.cardTitle}>Result</Text>
             <Text>document: {result.documentType}</Text>
             <Text>engine: {result.engine}</Text>
-            <Text>languages: {result.languagesUsed.join('+')}</Text>
+            <Text>script: {result.scriptUsed}</Text>
             <Text>mean confidence: {result.meanConfidence.toFixed(1)}</Text>
             <Text>duration: {Math.round(result.durationMs)} ms</Text>
             {result.processedImageUri ? (

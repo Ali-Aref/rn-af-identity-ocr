@@ -5,7 +5,11 @@ import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
-import com.googlecode.tesseract.android.TessBaseAPI
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.Text
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -13,35 +17,81 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import java.util.concurrent.Executors
 import kotlin.math.max
 import kotlin.math.roundToInt
 
 class RnAfIdentityOcrModule : Module() {
+  private val latinRecognizer by lazy {
+    TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+  }
+
+  private val arabicExecutor = Executors.newSingleThreadExecutor()
+  private var arabicEngine: ArabicOcrEngine? = null
+
+  private fun arabic(): ArabicOcrEngine {
+    val existing = arabicEngine
+    if (existing != null) return existing
+    val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+    return ArabicOcrEngine(context).also { arabicEngine = it }
+  }
+
   override fun definition() = ModuleDefinition {
     Name("RnAfIdentityOcr")
 
-    AsyncFunction("recognizeAsync") { imageUri: String, options: Map<String, Any?> ->
-      recognize(imageUri, options)
+    OnDestroy {
+      arabicEngine?.close()
+      arabicEngine = null
+      arabicExecutor.shutdownNow()
+    }
+
+    AsyncFunction("recognizeAsync") { imageUri: String, options: Map<String, Any?>, promise: Promise ->
+      val script = options["script"] as? String ?: "latin"
+      val binarize = options["binarize"] as? Boolean ?: false
+      val maxDimension = (options["maxDimension"] as? Number)?.toInt() ?: 2000
+      val started = System.currentTimeMillis()
+
+      val prepared = try {
+        prepareBitmap(imageUri, binarize, maxDimension)
+      } catch (e: Exception) {
+        promise.reject("ERR_IMAGE_LOAD", e.message ?: "Failed to load image", e)
+        return@AsyncFunction
+      }
+
+      when (script) {
+        "latin" -> recognizeLatin(prepared, started, promise)
+        "arabic" -> {
+          arabicExecutor.execute {
+            try {
+              val ocr = arabic().recognize(prepared.bitmap)
+              if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
+              promise.resolve(withMeta(ocr, "ppocr", "arabic", prepared.processedImageUri, started))
+            } catch (e: Exception) {
+              if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
+              promise.reject("ERR_OCR", "Arabic text recognition failed: ${e.message}", e)
+            }
+          }
+        }
+        else -> {
+          if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
+          promise.reject(
+            "ERR_UNSUPPORTED_SCRIPT",
+            "Script \"$script\" is not supported. Use \"latin\" or \"arabic\".",
+            null
+          )
+        }
+      }
     }
   }
 
-  private fun recognize(imageUri: String, options: Map<String, Any?>): Map<String, Any?> {
-    val started = System.currentTimeMillis()
+  private data class PreparedImage(
+    val bitmap: Bitmap,
+    val processedImageUri: String
+  )
 
-    @Suppress("UNCHECKED_CAST")
-    val languages = (options["languages"] as? List<*>)?.mapNotNull { it as? String }
-      ?.takeIf { it.isNotEmpty() }
-      ?: listOf("fas", "pus", "eng")
-    val psm = (options["psm"] as? Number)?.toInt() ?: TessBaseAPI.PageSegMode.PSM_AUTO
-    val oem = (options["oem"] as? Number)?.toInt() ?: TessBaseAPI.OEM_LSTM_ONLY
-    val minConfidence = (options["minConfidence"] as? Number)?.toFloat() ?: 0f
-    val binarize = options["binarize"] as? Boolean ?: true
-    val maxDimension = (options["maxDimension"] as? Number)?.toInt() ?: 2000
-
-    val dataPath = ensureTessdata(languages)
+  private fun prepareBitmap(imageUri: String, binarize: Boolean, maxDimension: Int): PreparedImage {
     var bitmap = loadBitmap(imageUri)
       ?: throw IllegalArgumentException("Could not decode image at uri: $imageUri")
-
     bitmap = downscaleIfNeeded(bitmap, maxDimension)
     if (binarize) {
       val processed = toBlackAndWhite(bitmap)
@@ -50,66 +100,91 @@ class RnAfIdentityOcrModule : Module() {
         bitmap = processed
       }
     }
-    val processedImageUri = saveProcessedBitmap(bitmap)
+    val uri = saveProcessedBitmap(bitmap)
+    return PreparedImage(bitmap, uri)
+  }
 
-    val api = TessBaseAPI()
-    try {
-      val langString = languages.joinToString("+")
-      if (!api.init(dataPath, langString, oem)) {
-        throw IllegalStateException(
-          "Failed to init Tesseract for languages=$langString. Ensure traineddata files exist."
+  private fun recognizeLatin(prepared: PreparedImage, started: Long, promise: Promise) {
+    val image = InputImage.fromBitmap(prepared.bitmap, 0)
+    val width = image.width
+    val height = image.height
+    if (width <= 0 || height <= 0) {
+      if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
+      promise.reject("ERR_IMAGE_LOAD", "Image has invalid dimensions: ${width}x${height}", null)
+      return
+    }
+
+    latinRecognizer
+      .process(image)
+      .addOnSuccessListener { visionText ->
+        if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
+        val lines = visionText.textBlocks.flatMap { it.lines }.map { line ->
+          mapOf(
+            "text" to line.text,
+            "confidence" to lineConfidence(line),
+            "box" to normalizeBox(line.boundingBox, width, height)
+          )
+        }
+        promise.resolve(
+          withMeta(
+            mapOf("lines" to lines, "width" to width, "height" to height),
+            "mlkit",
+            "latin",
+            prepared.processedImageUri,
+            started
+          )
         )
       }
-      api.setPageSegMode(psm)
-      api.setImage(bitmap)
-
-      val fullText = api.getUTF8Text()?.trim().orEmpty()
-      val meanConfidence = api.meanConfidence().toDouble()
-      val blocks = extractBlocks(api, minConfidence)
-
-      return mapOf(
-        "fullText" to fullText,
-        "blocks" to blocks,
-        "meanConfidence" to meanConfidence,
-        "engine" to "tesseract",
-        "languagesUsed" to languages,
-        "durationMs" to (System.currentTimeMillis() - started).toDouble(),
-        "processedImageUri" to processedImageUri
-      )
-    } finally {
-      api.recycle()
-      if (!bitmap.isRecycled) {
-        bitmap.recycle()
+      .addOnFailureListener { e ->
+        if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
+        promise.reject("ERR_OCR", "Latin text recognition failed: ${e.message}", e)
       }
-    }
   }
 
-  /** Cache PNG of the bitmap Tesseract will see (debug / compare preprocess). */
-  private fun saveProcessedBitmap(bitmap: Bitmap): String {
-    val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
-    val file = File(context.cacheDir, "rn-af-identity-ocr-${System.currentTimeMillis()}.png")
-    FileOutputStream(file).use { out ->
-      if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
-        throw IllegalStateException("Failed to write processed OCR image")
-      }
-    }
-    return Uri.fromFile(file).toString()
+  private fun withMeta(
+    ocr: Map<String, Any>,
+    engine: String,
+    scriptUsed: String,
+    processedImageUri: String,
+    started: Long
+  ): Map<String, Any?> {
+    return ocr + mapOf(
+      "engine" to engine,
+      "scriptUsed" to scriptUsed,
+      "processedImageUri" to processedImageUri,
+      "durationMs" to (System.currentTimeMillis() - started).toDouble()
+    )
   }
 
-  /** Grayscale + fixed threshold → black text on white. */
+  private fun lineConfidence(line: Text.Line): Double {
+    val elements = line.elements
+    if (elements.isEmpty()) return 0.0
+    return elements.map { it.confidence.toDouble() }.average()
+  }
+
+  private fun normalizeBox(rect: Rect?, width: Int, height: Int): Map<String, Double> {
+    if (rect == null) {
+      return mapOf("x" to 0.0, "y" to 0.0, "width" to 0.0, "height" to 0.0)
+    }
+    return mapOf(
+      "x" to rect.left.toDouble() / width,
+      "y" to rect.top.toDouble() / height,
+      "width" to rect.width().toDouble() / width,
+      "height" to rect.height().toDouble() / height
+    )
+  }
+
   private fun toBlackAndWhite(source: Bitmap, threshold: Int = 128): Bitmap {
     val width = source.width
     val height = source.height
     val pixels = IntArray(width * height)
     source.getPixels(pixels, 0, width, 0, 0, width, height)
-
     for (i in pixels.indices) {
       val c = pixels[i]
       val gray = (0.299 * Color.red(c) + 0.587 * Color.green(c) + 0.114 * Color.blue(c)).roundToInt()
       val v = if (gray < threshold) 0 else 255
       pixels[i] = Color.rgb(v, v, v)
     }
-
     val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
     out.setPixels(pixels, 0, width, 0, 0, width, height)
     return out
@@ -125,59 +200,15 @@ class RnAfIdentityOcrModule : Module() {
     return Bitmap.createScaledBitmap(source, w, h, true)
   }
 
-  private fun extractBlocks(api: TessBaseAPI, minConfidence: Float): List<Map<String, Any?>> {
-    val iterator = api.resultIterator ?: return emptyList()
-    try {
-      val lines = mutableListOf<Map<String, Any?>>()
-      iterator.begin()
-      do {
-        val text = iterator.getUTF8Text(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE)
-          ?.trim()
-          .orEmpty()
-        if (text.isEmpty()) continue
-        val confidence = iterator.confidence(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE)
-        if (confidence < minConfidence) continue
-        val rect = iterator.getBoundingRect(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE)
-          ?: Rect()
-        lines.add(
-          mapOf(
-            "text" to text,
-            "confidence" to confidence.toDouble(),
-            "bbox" to mapOf(
-              "left" to rect.left.toDouble(),
-              "top" to rect.top.toDouble(),
-              "right" to rect.right.toDouble(),
-              "bottom" to rect.bottom.toDouble()
-            )
-          )
-        )
-      } while (iterator.next(TessBaseAPI.PageIteratorLevel.RIL_TEXTLINE))
-
-      if (lines.isEmpty()) return emptyList()
-
-      val blockText = lines.joinToString("\n") { it["text"] as String }
-      val avgConf = lines.map { it["confidence"] as Double }.average()
-      val left = lines.minOf { (it["bbox"] as Map<*, *>)["left"] as Double }
-      val top = lines.minOf { (it["bbox"] as Map<*, *>)["top"] as Double }
-      val right = lines.maxOf { (it["bbox"] as Map<*, *>)["right"] as Double }
-      val bottom = lines.maxOf { (it["bbox"] as Map<*, *>)["bottom"] as Double }
-
-      return listOf(
-        mapOf(
-          "text" to blockText,
-          "confidence" to avgConf,
-          "bbox" to mapOf(
-            "left" to left,
-            "top" to top,
-            "right" to right,
-            "bottom" to bottom
-          ),
-          "lines" to lines
-        )
-      )
-    } finally {
-      iterator.delete()
+  private fun saveProcessedBitmap(bitmap: Bitmap): String {
+    val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
+    val file = File(context.cacheDir, "rn-af-identity-ocr-${System.currentTimeMillis()}.png")
+    FileOutputStream(file).use { out ->
+      if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)) {
+        throw IllegalStateException("Failed to write processed OCR image")
+      }
     }
+    return Uri.fromFile(file).toString()
   }
 
   private fun loadBitmap(imageUri: String): Bitmap? {
@@ -193,40 +224,5 @@ class RnAfIdentityOcrModule : Module() {
       }
     }
     return stream?.use { BitmapFactory.decodeStream(it) }
-  }
-
-  private fun ensureTessdata(languages: List<String>): String {
-    val context = appContext.reactContext ?: throw Exceptions.ReactContextLost()
-    val base = File(context.filesDir, "tesseract")
-    val tessdataDir = File(base, "tessdata")
-    if (!tessdataDir.exists()) {
-      tessdataDir.mkdirs()
-    }
-
-    val assetManager = context.assets
-    val assetLangs = runCatching { assetManager.list("tessdata")?.toList().orEmpty() }
-      .getOrDefault(emptyList())
-
-    for (name in assetLangs) {
-      if (!name.endsWith(".traineddata")) continue
-      val outFile = File(tessdataDir, name)
-      if (outFile.exists() && outFile.length() > 0L) continue
-      assetManager.open("tessdata/$name").use { input ->
-        FileOutputStream(outFile).use { output -> input.copyTo(output) }
-      }
-    }
-
-    val missing = languages.filter { lang ->
-      !File(tessdataDir, "$lang.traineddata").exists()
-    }
-    if (missing.isNotEmpty()) {
-      throw IllegalStateException(
-        "Missing Tesseract language data for: ${missing.joinToString(", ")}. " +
-          "Add ${missing.joinToString(", ") { "$it.traineddata" }} under tessdata/ " +
-          "(bundled assets or ${tessdataDir.absolutePath})."
-      )
-    }
-
-    return base.absolutePath
   }
 }

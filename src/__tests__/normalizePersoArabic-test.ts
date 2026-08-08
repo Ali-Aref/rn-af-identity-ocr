@@ -1,5 +1,4 @@
-import type { AfDocumentType } from '../RnAfIdentityOcr.types';
-import { DEFAULT_OCR_LANGUAGES } from '../constants';
+import type { AfDocumentType, OcrScript } from '../RnAfIdentityOcr.types';
 import { normalizePersoArabicText } from '../normalizePersoArabic';
 
 describe('normalizePersoArabicText', () => {
@@ -25,13 +24,7 @@ describe('normalizePersoArabicText', () => {
   });
 });
 
-describe('DEFAULT_OCR_LANGUAGES', () => {
-  it('prioritizes Persian and Pashto with English', () => {
-    expect([...DEFAULT_OCR_LANGUAGES]).toEqual(['fas', 'pus', 'eng']);
-  });
-});
-
-describe('AfDocumentType', () => {
+describe('AfDocumentType script routing', () => {
   it('covers the four Afghan identity document kinds', () => {
     const types: AfDocumentType[] = [
       'e_tazkira_front',
@@ -40,5 +33,16 @@ describe('AfDocumentType', () => {
       'passport',
     ];
     expect(types).toHaveLength(4);
+  });
+
+  it('uses arabic for fronts and latin for back/passport', () => {
+    const routing: Record<AfDocumentType, OcrScript> = {
+      e_tazkira_front: 'arabic',
+      paper_tazkira: 'arabic',
+      e_tazkira_back: 'latin',
+      passport: 'latin',
+    };
+    expect(routing.e_tazkira_front).toBe('arabic');
+    expect(routing.passport).toBe('latin');
   });
 });

@@ -1,7 +1,7 @@
 {
   "name": "rn-af-identity-ocr",
   "version": "0.1.0",
-  "description": "On-device Expo OCR for Afghan identity documents (e-Tazkira, paper Tazkira, passport)",
+  "description": "On-device Expo OCR for Afghan identity documents (ML Kit/Vision + PP-OCR, optional B&W preprocess)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "react-native": "src/index.ts",
@@ -11,7 +11,6 @@
     "lint": "eslint src/",
     "test": "node internal/module_scripts/test.js",
     "prepare": "node internal/module_scripts/prepare.js",
-    "download-tessdata": "bash scripts/download-tessdata.sh",
     "open:ios": "node internal/module_scripts/open-ios.js",
     "open:android": "node internal/module_scripts/open-android.js"
   },
@@ -19,7 +18,10 @@
     "react-native",
     "expo",
     "ocr",
-    "tesseract",
+    "ml-kit",
+    "vision",
+    "pp-ocr",
+    "onnx",
     "afghanistan",
     "tazkira",
     "passport",
