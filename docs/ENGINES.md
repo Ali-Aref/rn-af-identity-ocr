@@ -50,7 +50,15 @@ Before either engine:
 
 PP-OCR expects ImageNet-normalized RGB. Default leaves color as-is; pass `{ manipulateColors: true }` to force B&W.
 
-## Adding languages
+## Passport MRZ
+
+`scanPassport` runs Latin OCR then the same TS flow as `af-identity-scanner`:
+
+1. `locateMrz` — bottom chevron lines (TD3 = 2×44), with merges/splits repaired
+2. `parseMrz` — `mrz` package + check-digit autocorrect → structured fields
+
+See `src/mrz/locate.ts` and `src/mrz/parse.ts`.
+
 
 There is no tessdata download flow. Latin coverage is fixed by ML Kit / Vision. Arabic coverage is fixed by the bundled PP-OCR arabic rec model and dict. Extending scripts means swapping or fine-tuning those models in a fork — not adding `.traineddata` packs.
 

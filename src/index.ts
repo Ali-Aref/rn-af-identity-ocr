@@ -82,7 +82,8 @@ function nativeToOcrResult(raw: NativeOcrResult): OcrResult {
 }
 
 function extractPassportMrz(raw: NativeOcrResult): PassportMrz | null {
-  const candidate = locateMrz(raw.lines);
+  // Same entry as af-identity-scanner: locateMrz(recognition) → parseMrz(candidate).
+  const candidate = locateMrz({ lines: raw.lines });
   if (!candidate) return null;
   return parseMrz(candidate);
 }

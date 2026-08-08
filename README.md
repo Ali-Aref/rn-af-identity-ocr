@@ -134,7 +134,9 @@ Also exported: `normalizePersoArabicText`, `locateMrz`, `parseMrz`, types.
 
 `imageUri` must be a local `file://` or `content://` URI.
 
-Passport returns raw OCR **plus** on-device MRZ parse (`mrz` npm package, check-digit autocorrect). Other document types remain raw OCR text for now.
+Passport returns raw OCR **plus** on-device MRZ parse (same `locateMrz` → `parseMrz` flow as `af-identity-scanner`, using the `mrz` package with check-digit autocorrect). Locate also resegments merged/split OCR lines, which is common on device.
+
+MRZ fields: `documentNumber`, `surname`, `givenNames`, `nationality`, `dateOfBirth`, `sex`, `dateOfExpiry`, `personalNumber`.
 
 ---
 
