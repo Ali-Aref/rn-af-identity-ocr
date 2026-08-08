@@ -60,15 +60,17 @@ class RnAfIdentityOcrModule : Module() {
 
       when (script) {
         "latin" -> recognizeLatin(prepared, started, promise)
-        "arabic" -> {
+        "arabic", "persian" -> {
           arabicExecutor.execute {
             try {
               val ocr = arabic().recognize(prepared.bitmap)
               if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
-              promise.resolve(withMeta(ocr, "ppocr", "arabic", prepared.processedImageUri, started))
+              // Paddle ships Persian/Pashto in arabic_PP-OCRv5_mobile_rec (no separate persian ONNX).
+              val engineScript = if (script == "persian") "persian" else "arabic"
+              promise.resolve(withMeta(ocr, "ppocr", engineScript, prepared.processedImageUri, started))
             } catch (e: Exception) {
               if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
-              promise.reject("ERR_OCR", "Arabic text recognition failed: ${e.message}", e)
+              promise.reject("ERR_OCR", "Arabic-script text recognition failed: ${e.message}", e)
             }
           }
         }
@@ -76,7 +78,7 @@ class RnAfIdentityOcrModule : Module() {
           if (!prepared.bitmap.isRecycled) prepared.bitmap.recycle()
           promise.reject(
             "ERR_UNSUPPORTED_SCRIPT",
-            "Script \"$script\" is not supported. Use \"latin\" or \"arabic\".",
+            "Script \"$script\" is not supported. Use \"latin\", \"persian\", or \"arabic\".",
             null
           )
         }

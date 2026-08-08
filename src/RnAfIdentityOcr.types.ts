@@ -1,5 +1,5 @@
 /** Writing system the native recognizer should use. */
-export type OcrScript = 'latin' | 'arabic';
+export type OcrScript = 'latin' | 'arabic' | 'persian';
 
 export type AfDocumentType = 'e_tazkira_front' | 'e_tazkira_back' | 'paper_tazkira' | 'passport';
 

@@ -10,7 +10,7 @@ Uses the same dual-engine approach as `af-identity-scanner`:
 
 | Script | Engine | Used for |
 |--------|--------|----------|
-| **Arabic** | PP-OCRv5 (ONNX) | e-Tazkira front, paper Tazkira (Dari / Pashto / Persian) |
+| **Persian** | PP-OCRv5 arabic-family ONNX (includes Persian / Pashto) | e-Tazkira front, paper Tazkira |
 | **Latin** | ML Kit (Android) / Vision (iOS) | e-Tazkira back, passport / MRZ |
 
 Optional **native black-and-white preprocess** (`manipulateColors`, default `false`) can run before either engine. Fully offline — no API calls.
@@ -58,7 +58,7 @@ import {
 
 const front = await scanETazkiraFront(imageUri);
 console.log(front.documentType); // 'e_tazkira_front'
-console.log(front.scriptUsed);   // 'arabic'
+console.log(front.scriptUsed);   // 'persian'
 console.log(front.engine);       // 'ppocr'
 console.log(front.fullText);
 console.log(front.processedImageUri); // file://… after downscale / optional B&W
@@ -84,9 +84,9 @@ Compare your original photo to `result.processedImageUri` to see what OCR receiv
 
 | Function | `documentType` | Script |
 |----------|----------------|--------|
-| `scanETazkiraFront(uri, options?)` | `e_tazkira_front` | `arabic` (PP-OCR) |
+| `scanETazkiraFront(uri, options?)` | `e_tazkira_front` | `persian` (PP-OCR arabic-family) |
 | `scanETazkiraBack(uri, options?)` | `e_tazkira_back` | `latin` (ML Kit / Vision) |
-| `scanPaperTazkira(uri, options?)` | `paper_tazkira` | `arabic` (PP-OCR) |
+| `scanPaperTazkira(uri, options?)` | `paper_tazkira` | `persian` (PP-OCR arabic-family) |
 | `scanPassport(uri, options?)` | `passport` | `latin` (ML Kit / Vision) |
 
 ### `ScanOptions`
@@ -109,7 +109,7 @@ type ScanResult = {
   blocks: OcrBlock[];
   meanConfidence: number; // 0–100
   engine: 'mlkit' | 'vision' | 'ppocr';
-  scriptUsed: 'latin' | 'arabic';
+  scriptUsed: 'latin' | 'arabic' | 'persian';
   durationMs: number;
   processedImageUri: string | null;
 };

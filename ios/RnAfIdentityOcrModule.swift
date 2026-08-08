@@ -29,14 +29,15 @@ public class RnAfIdentityOcrModule: Module {
       case "latin":
         ocr = try Self.recognizeLatin(image: image)
         engine = "vision"
-      case "arabic":
+      case "arabic", "persian":
+        // Paddle ships Persian/Pashto in arabic_PP-OCRv5_mobile_rec (no separate persian ONNX).
         if self.arabicEngine == nil {
           self.arabicEngine = try ArabicOcrEngine()
         }
         ocr = try self.arabicEngine!.recognize(image: image)
         engine = "ppocr"
       default:
-        throw OcrException("Script \"\(script)\" is not supported. Use \"latin\" or \"arabic\".")
+        throw OcrException("Script \"\(script)\" is not supported. Use \"latin\", \"persian\", or \"arabic\".")
       }
 
       var result = ocr

@@ -6,8 +6,8 @@
 
 | API | Script | Engine |
 |-----|--------|--------|
-| `scanETazkiraFront` | `arabic` | PP-OCRv5 (ONNX) |
-| `scanPaperTazkira` | `arabic` | PP-OCRv5 (ONNX) |
+| `scanETazkiraFront` | `persian` | PP-OCRv5 (`arabic_PP-OCRv5_mobile_rec` — includes Persian/Pashto) |
+| `scanPaperTazkira` | `persian` | PP-OCRv5 (`arabic_PP-OCRv5_mobile_rec` — includes Persian/Pashto) |
 | `scanETazkiraBack` | `latin` | ML Kit (Android) / Vision (iOS) |
 | `scanPassport` | `latin` | ML Kit (Android) / Vision (iOS) |
 
@@ -18,9 +18,11 @@
 - **Android:** `com.google.mlkit:text-recognition` (bundled Latin model; works without Play Services)
 - **iOS:** `VNRecognizeTextRequest` at `.accurate`, `usesLanguageCorrection = false` (avoids inventing characters on MRZ / IDs)
 
-## Arabic (Dari / Pashto / Persian)
+## Persian / Pashto (PP-OCR arabic-family)
 
-Bundled **PP-OCRv5** mobile detection + arabic recognition via ONNX Runtime:
+Paddle does **not** ship a separate `persian_*.onnx`. Persian and Pashto are covered by the official **`arabic_PP-OCRv5_mobile_rec`** model (Arabic-script family: Arabic, Persian, Urdu, Pashto, …).
+
+Front and paper scanners request script `persian`; native still loads that same ONNX + `ppocrv5_arabic_dict.txt` (charset includes `پ چ گ ی` and Pashto letters like `ټ ږ ګ ڼ`).
 
 | File | Role | Approx size |
 |------|------|-------------|

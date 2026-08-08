@@ -107,8 +107,9 @@ export default function App() {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.header}>rn-af-identity-ocr</Text>
         <Text style={styles.sub}>
-          Dual-engine OCR (PP-OCR Arabic / ML Kit·Vision Latin) with optional native B&W.
-          Pick a document type, then gallery or camera. Rebuild native after engine changes.
+          Dual-engine OCR (PP-OCR Persian/Pashto / ML Kit·Vision Latin) with optional
+          native B&W. Pick a document type, then gallery or camera. Rebuild native after
+          engine changes.
         </Text>
 
         <Text style={styles.sectionLabel}>Document type</Text>

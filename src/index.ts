@@ -16,8 +16,8 @@ export * from './RnAfIdentityOcr.types';
 export { normalizePersoArabicText };
 
 const DOC_SCRIPT: Record<AfDocumentType, OcrScript> = {
-  e_tazkira_front: 'arabic',
-  paper_tazkira: 'arabic',
+  e_tazkira_front: 'persian',
+  paper_tazkira: 'persian',
   e_tazkira_back: 'latin',
   passport: 'latin',
 };
