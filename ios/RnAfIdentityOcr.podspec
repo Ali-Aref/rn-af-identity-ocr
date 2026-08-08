@@ -1,8 +1,8 @@
 Pod::Spec.new do |s|
-  s.name           = 'RnOcrPro'
+  s.name           = 'RnAfIdentityOcr'
   s.version        = '0.1.0'
-  s.summary        = 'On-device OCR for React Native Expo with Persian and Pashto focus'
-  s.description    = 'Tesseract-based on-device OCR supporting Persian (fas), Pashto (pus), English, and extensible language packs'
+  s.summary        = 'On-device OCR for Afghan identity documents (e-Tazkira, paper Tazkira, passport)'
+  s.description    = 'Tesseract-based on-device OCR with native B&W preprocess for Afghan ID documents; languages fas/pus/eng'
   s.author         = 'Ali Aref'
   s.homepage       = 'https://github.com/Ali-Aref/rn-ocr-pro'
   s.platforms      = {
@@ -24,6 +24,6 @@ Pod::Spec.new do |s|
   s.exclude_files = "Resources/**"
 
   s.resource_bundles = {
-    'RnOcrProTessdata' => ['Resources/tessdata/*.traineddata']
+    'RnAfIdentityOcrTessdata' => ['Resources/tessdata/*.traineddata']
   }
 end

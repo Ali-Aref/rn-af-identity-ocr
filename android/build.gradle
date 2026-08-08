@@ -3,7 +3,7 @@ plugins {
   id 'expo-module-gradle-plugin'
 }
 
-group = 'expo.modules.rnocrpro'
+group = 'expo.modules.rnafidentityocr'
 version = '0.1.0'
 
 repositories {
@@ -13,7 +13,7 @@ repositories {
 }
 
 android {
-  namespace "expo.modules.rnocrpro"
+  namespace "expo.modules.rnafidentityocr"
   defaultConfig {
     versionCode 1
     versionName "0.1.0"

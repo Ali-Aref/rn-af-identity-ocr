@@ -1,7 +1,8 @@
-package expo.modules.rnocrpro
+package expo.modules.rnafidentityocr
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
 import com.googlecode.tesseract.android.TessBaseAPI
@@ -12,10 +13,12 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.InputStream
+import kotlin.math.max
+import kotlin.math.roundToInt
 
-class RnOcrProModule : Module() {
+class RnAfIdentityOcrModule : Module() {
   override fun definition() = ModuleDefinition {
-    Name("RnOcrPro")
+    Name("RnAfIdentityOcr")
 
     AsyncFunction("recognizeAsync") { imageUri: String, options: Map<String, Any?> ->
       recognize(imageUri, options)
@@ -32,10 +35,21 @@ class RnOcrProModule : Module() {
     val psm = (options["psm"] as? Number)?.toInt() ?: TessBaseAPI.PageSegMode.PSM_AUTO
     val oem = (options["oem"] as? Number)?.toInt() ?: TessBaseAPI.OEM_LSTM_ONLY
     val minConfidence = (options["minConfidence"] as? Number)?.toFloat() ?: 0f
+    val binarize = options["binarize"] as? Boolean ?: true
+    val maxDimension = (options["maxDimension"] as? Number)?.toInt() ?: 2000
 
     val dataPath = ensureTessdata(languages)
-    val bitmap = loadBitmap(imageUri)
+    var bitmap = loadBitmap(imageUri)
       ?: throw IllegalArgumentException("Could not decode image at uri: $imageUri")
+
+    bitmap = downscaleIfNeeded(bitmap, maxDimension)
+    if (binarize) {
+      val processed = toBlackAndWhite(bitmap)
+      if (processed !== bitmap) {
+        bitmap.recycle()
+        bitmap = processed
+      }
+    }
 
     val api = TessBaseAPI()
     try {
@@ -66,6 +80,35 @@ class RnOcrProModule : Module() {
         bitmap.recycle()
       }
     }
+  }
+
+  /** Grayscale + fixed threshold → black text on white. */
+  private fun toBlackAndWhite(source: Bitmap, threshold: Int = 128): Bitmap {
+    val width = source.width
+    val height = source.height
+    val pixels = IntArray(width * height)
+    source.getPixels(pixels, 0, width, 0, 0, width, height)
+
+    for (i in pixels.indices) {
+      val c = pixels[i]
+      val gray = (0.299 * Color.red(c) + 0.587 * Color.green(c) + 0.114 * Color.blue(c)).roundToInt()
+      val v = if (gray < threshold) 0 else 255
+      pixels[i] = Color.rgb(v, v, v)
+    }
+
+    val out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    out.setPixels(pixels, 0, width, 0, 0, width, height)
+    return out
+  }
+
+  private fun downscaleIfNeeded(source: Bitmap, maxDimension: Int): Bitmap {
+    if (maxDimension <= 0) return source
+    val longest = max(source.width, source.height)
+    if (longest <= maxDimension) return source
+    val scale = maxDimension.toFloat() / longest
+    val w = (source.width * scale).roundToInt().coerceAtLeast(1)
+    val h = (source.height * scale).roundToInt().coerceAtLeast(1)
+    return Bitmap.createScaledBitmap(source, w, h, true)
   }
 
   private fun extractBlocks(api: TessBaseAPI, minConfidence: Float): List<Map<String, Any?>> {

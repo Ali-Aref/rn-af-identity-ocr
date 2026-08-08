@@ -1,14 +1,14 @@
 {
   "expo": {
-    "name": "rn-ocr-pro-example",
-    "slug": "rn-ocr-pro-example",
+    "name": "rn-af-identity-ocr-example",
+    "slug": "rn-af-identity-ocr-example",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "expo.modules.rnocrpro.example"
+      "bundleIdentifier": "expo.modules.rnafidentityocr.example"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +18,7 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "expo.modules.rnocrpro.example"
+      "package": "expo.modules.rnafidentityocr.example"
     },
     "web": {
       "favicon": "./assets/favicon.png"

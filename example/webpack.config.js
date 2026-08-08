@@ -6,7 +6,7 @@ module.exports = async (env, argv) => {
     {
       ...env,
       babel: {
-        dangerouslyAddModulePathsToTranspile: ['rn-ocr-pro'],
+        dangerouslyAddModulePathsToTranspile: ['rn-af-identity-ocr'],
       },
     },
     argv

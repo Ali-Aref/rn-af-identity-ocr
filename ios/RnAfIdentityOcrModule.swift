@@ -1,11 +1,13 @@
+import CoreImage
+import CoreImage.CIFilterBuiltins
 import ExpoModulesCore
 import UIKit
 import libtesseract
 import kta_tesseract_swift
 
-public class RnOcrProModule: Module {
+public class RnAfIdentityOcrModule: Module {
   public func definition() -> ModuleDefinition {
-    Name("RnOcrPro")
+    Name("RnAfIdentityOcr")
 
     AsyncFunction("recognizeAsync") { (imageUri: String, options: [String: Any]) -> [String: Any] in
       try self.recognize(imageUri: imageUri, options: options)
@@ -20,11 +22,16 @@ public class RnOcrProModule: Module {
     let psm = (options["psm"] as? Int) ?? 3
     let oem = (options["oem"] as? Int) ?? 1
     let minConfidence = Float((options["minConfidence"] as? Double) ?? 0)
+    let binarize = (options["binarize"] as? Bool) ?? true
+    let maxDimension = (options["maxDimension"] as? Int) ?? 2000
 
-    let image = try loadImage(from: imageUri)
+    var image = try loadImage(from: imageUri)
+    image = downscaleIfNeeded(image, maxDimension: maxDimension)
+    if binarize {
+      image = toBlackAndWhite(image)
+    }
+
     let tessdataDir = try ensureTessdata(languages: languages)
-
-    // SwiftyTesseract / kta-tesseract-swift: pathToTrainedData is the tessdata directory itself.
     let dataSource = DirectoryLanguageModelDataSource(path: tessdataDir.path)
     let recognitionLanguages: [RecognitionLanguage] = languages.map { .custom($0) }
     let engineMode: EngineMode
@@ -103,6 +110,76 @@ public class RnOcrProModule: Module {
     }
   }
 
+  /// Grayscale + fixed threshold → black text on white.
+  private func toBlackAndWhite(_ image: UIImage, threshold: CGFloat = 0.5) -> UIImage {
+    guard let cgImage = image.cgImage else { return image }
+    let ciImage = CIImage(cgImage: cgImage)
+    let context = CIContext(options: nil)
+
+    let mono = ciImage.applyingFilter("CIPhotoEffectMono")
+    let controls = CIFilter.colorControls()
+    controls.inputImage = mono
+    controls.contrast = 1.4
+    controls.brightness = 0.05
+    guard let contrasted = controls.outputImage else { return image }
+
+    // Manual threshold via CIColorMatrix-style path: use CIColorClamp after boosting contrast,
+    // or pixel buffer. Pixel path is predictable for OCR.
+    guard let cg = context.createCGImage(contrasted, from: contrasted.extent) else { return image }
+    return thresholdBitmap(UIImage(cgImage: cg, scale: image.scale, orientation: image.imageOrientation), threshold: threshold)
+  }
+
+  private func thresholdBitmap(_ image: UIImage, threshold: CGFloat) -> UIImage {
+    guard let cgImage = image.cgImage else { return image }
+    let width = cgImage.width
+    let height = cgImage.height
+    let bytesPerPixel = 4
+    let bytesPerRow = width * bytesPerPixel
+    var pixels = [UInt8](repeating: 0, count: height * bytesPerRow)
+
+    guard let ctx = CGContext(
+      data: &pixels,
+      width: width,
+      height: height,
+      bitsPerComponent: 8,
+      bytesPerRow: bytesPerRow,
+      space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+    ) else { return image }
+
+    ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+    let cut = UInt8((threshold * 255).rounded())
+
+    for y in 0..<height {
+      for x in 0..<width {
+        let i = y * bytesPerRow + x * bytesPerPixel
+        let gray = UInt8((0.299 * Double(pixels[i]) + 0.587 * Double(pixels[i + 1]) + 0.114 * Double(pixels[i + 2])).rounded())
+        let v: UInt8 = gray < cut ? 0 : 255
+        pixels[i] = v
+        pixels[i + 1] = v
+        pixels[i + 2] = v
+        pixels[i + 3] = 255
+      }
+    }
+
+    guard let outCg = ctx.makeImage() else { return image }
+    return UIImage(cgImage: outCg, scale: image.scale, orientation: image.imageOrientation)
+  }
+
+  private func downscaleIfNeeded(_ image: UIImage, maxDimension: Int) -> UIImage {
+    guard maxDimension > 0 else { return image }
+    let size = image.size
+    let longest = max(size.width, size.height)
+    guard longest > CGFloat(maxDimension) else { return image }
+    let scale = CGFloat(maxDimension) / longest
+    let newSize = CGSize(width: size.width * scale, height: size.height * scale)
+    UIGraphicsBeginImageContextWithOptions(newSize, true, 1.0)
+    image.draw(in: CGRect(origin: .zero, size: newSize))
+    let scaled = UIGraphicsGetImageFromCurrentImageContext()
+    UIGraphicsEndImageContext()
+    return scaled ?? image
+  }
+
   private func loadImage(from imageUri: String) throws -> UIImage {
     if let url = URL(string: imageUri), url.isFileURL,
        let data = try? Data(contentsOf: url),
@@ -133,7 +210,6 @@ public class RnOcrProModule: Module {
 
     copyBundledTessdata(into: tessdataDir)
 
-    // Consumer-added extras in main bundle tessdata/
     if let mainTess = Bundle.main.resourceURL?.appendingPathComponent("tessdata"),
        let files = try? fm.contentsOfDirectory(at: mainTess, includingPropertiesForKeys: nil) {
       for url in files where url.pathExtension == "traineddata" {
@@ -160,9 +236,9 @@ public class RnOcrProModule: Module {
   private func copyBundledTessdata(into tessdataDir: URL) {
     let fm = FileManager.default
     let candidates: [Bundle] = [
-      Bundle(url: Bundle(for: RnOcrProModule.self).bundleURL.appendingPathComponent("RnOcrProTessdata.bundle")),
-      Bundle(identifier: "org.cocoapods.RnOcrProTessdata"),
-      Bundle(for: RnOcrProModule.self),
+      Bundle(url: Bundle(for: RnAfIdentityOcrModule.self).bundleURL.appendingPathComponent("RnAfIdentityOcrTessdata.bundle")),
+      Bundle(identifier: "org.cocoapods.RnAfIdentityOcrTessdata"),
+      Bundle(for: RnAfIdentityOcrModule.self),
       Bundle.main,
     ].compactMap { $0 }
 
@@ -190,7 +266,6 @@ private final class OcrException: Exception {
   override var reason: String { message }
 }
 
-/// Points Tesseract at an absolute tessdata directory (SwiftyTesseract convention).
 private struct DirectoryLanguageModelDataSource: LanguageModelDataSource {
   let path: String
   var pathToTrainedData: String { path }

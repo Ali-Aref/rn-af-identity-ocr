@@ -22,7 +22,7 @@ function ensureJitpack(contents) {
 /**
  * Ensures JitPack is available so Tesseract4Android can resolve.
  */
-function withRnOcrPro(config) {
+function withRnAfIdentityOcr(config) {
   config = withSettingsGradle(config, (cfg) => {
     cfg.modResults.contents = ensureJitpack(cfg.modResults.contents);
     return cfg;
@@ -38,4 +38,4 @@ function withRnOcrPro(config) {
   return config;
 }
 
-module.exports = createRunOncePlugin(withRnOcrPro, 'rn-ocr-pro', '0.1.0');
+module.exports = createRunOncePlugin(withRnAfIdentityOcr, 'rn-af-identity-ocr', '0.1.0');

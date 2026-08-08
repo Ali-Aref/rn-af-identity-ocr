@@ -1,9 +1,9 @@
 {
   "platforms": ["apple", "android"],
   "apple": {
-    "modules": ["RnOcrProModule"]
+    "modules": ["RnAfIdentityOcrModule"]
   },
   "android": {
-    "modules": ["expo.modules.rnocrpro.RnOcrProModule"]
+    "modules": ["expo.modules.rnafidentityocr.RnAfIdentityOcrModule"]
   }
 }

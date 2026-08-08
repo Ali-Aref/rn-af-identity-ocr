@@ -8,23 +8,18 @@ const escape = (p) => p.replace(/[/\\]/g, '[/\\\\]');
 
 const config = getDefaultConfig(projectRoot);
 
-// Watch the parent Expo module so local src/ changes hot-reload.
 config.watchFolders = [workspaceRoot];
 
-// Parent package files live above example/. Hierarchical lookup would resolve
-// `expo` / `react-native` from ../node_modules and install a second copy of the
-// Expo runtime globals → Hermes "TypeError: property is not writable".
 config.resolver.disableHierarchicalLookup = true;
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
-  // pnpm puts transitive deps here
   path.resolve(projectRoot, 'node_modules/.pnpm/node_modules'),
 ];
 
 const singleton = (name) => path.resolve(projectRoot, 'node_modules', name);
 
 config.resolver.extraNodeModules = {
-  'rn-ocr-pro': workspaceRoot,
+  'rn-af-identity-ocr': workspaceRoot,
   react: singleton('react'),
   'react-native': singleton('react-native'),
   expo: singleton('expo'),

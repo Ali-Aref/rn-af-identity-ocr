@@ -1,11 +1,24 @@
-import type { OcrBlock, OcrLine, OcrRecognizeOptions, OcrResult } from './RnOcrPro.types';
-import getRnOcrProModule from './RnOcrProModule';
+import type {
+  AfDocumentType,
+  OcrBlock,
+  OcrLine,
+  OcrResult,
+  ScanResult,
+} from './RnAfIdentityOcr.types';
+import getRnAfIdentityOcrModule from './RnAfIdentityOcrModule';
 import { DEFAULT_OCR_LANGUAGES } from './constants';
 import { normalizePersoArabicText } from './normalizePersoArabic';
 
-export * from './RnOcrPro.types';
+export * from './RnAfIdentityOcr.types';
 export { DEFAULT_OCR_LANGUAGES } from './constants';
 export { normalizePersoArabicText };
+
+const DOC_LANGUAGES: Record<AfDocumentType, readonly string[]> = {
+  e_tazkira_front: DEFAULT_OCR_LANGUAGES,
+  e_tazkira_back: DEFAULT_OCR_LANGUAGES,
+  paper_tazkira: DEFAULT_OCR_LANGUAGES,
+  passport: ['eng', 'fas', 'pus'],
+};
 
 function mapText(text: string, normalize: boolean, normalizeDigits: boolean): string {
   return normalize ? normalizePersoArabicText(text, { normalizeDigits }) : text;
@@ -22,43 +35,57 @@ function mapBlock(block: OcrBlock, normalize: boolean, normalizeDigits: boolean)
   };
 }
 
-/**
- * Recognize text in an image URI (file:// or content://).
- * Fully on-device via Tesseract. No network calls.
- */
-export async function recognizeAsync(
+/** Internal: native OCR + Perso-Arabic normalize. Always binarizes for ID scans. */
+async function recognizeForDocument(
   imageUri: string,
-  options: OcrRecognizeOptions = {}
-): Promise<OcrResult> {
+  documentType: AfDocumentType
+): Promise<ScanResult> {
   if (!imageUri || typeof imageUri !== 'string') {
-    throw new Error('rn-ocr-pro: imageUri must be a non-empty string');
+    throw new Error('rn-af-identity-ocr: imageUri must be a non-empty string');
   }
 
-  const languages = options.languages?.length ? options.languages : [...DEFAULT_OCR_LANGUAGES];
-  const normalize = options.normalizePersoArabic !== false;
-
-  const raw = await getRnOcrProModule().recognizeAsync(imageUri, {
+  const languages = [...DOC_LANGUAGES[documentType]];
+  const raw = await getRnAfIdentityOcrModule().recognizeAsync(imageUri, {
     languages,
-    psm: options.psm ?? 3,
-    oem: options.oem ?? 1,
-    minConfidence: options.minConfidence ?? 0,
+    psm: 3,
+    oem: 1,
+    minConfidence: 0,
+    binarize: true,
+    maxDimension: 2000,
   });
 
-  if (!normalize) {
-    return raw;
-  }
-
-  return {
+  const normalized: OcrResult = {
     ...raw,
     fullText: mapText(raw.fullText, true, true),
     blocks: raw.blocks.map((b) => mapBlock(b, true, true)),
   };
+
+  return { ...normalized, documentType };
 }
 
-const RnOcrPro = {
-  recognizeAsync,
+export function scanETazkiraFront(imageUri: string): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'e_tazkira_front');
+}
+
+export function scanETazkiraBack(imageUri: string): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'e_tazkira_back');
+}
+
+export function scanPaperTazkira(imageUri: string): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'paper_tazkira');
+}
+
+export function scanPassport(imageUri: string): Promise<ScanResult> {
+  return recognizeForDocument(imageUri, 'passport');
+}
+
+const RnAfIdentityOcr = {
+  scanETazkiraFront,
+  scanETazkiraBack,
+  scanPaperTazkira,
+  scanPassport,
   normalizePersoArabicText,
   DEFAULT_OCR_LANGUAGES,
 };
 
-export default RnOcrPro;
+export default RnAfIdentityOcr;

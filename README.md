@@ -1,35 +1,32 @@
-# rn-ocr-pro
+# rn-af-identity-ocr
 
-On-device OCR for **React Native / Expo** with first-class support for **Persian (`fas`)** and **Pashto (`pus`)**, plus English (`eng`) and any other Tesseract language you bundle.
+On-device OCR for **Afghan identity documents** in React Native / Expo:
 
-- Fully **offline** — no API keys, no network calls
-- **Tesseract** LSTM engine on Android and iOS
-- Typed `recognizeAsync` API with blocks, lines, bounding boxes, and confidence
-- Optional Perso-Arabic normalization (ی/ي, ک/ك, digits, whitespace)
+- e-Tazkira front / back
+- Paper Tazkira
+- Afghan passport
 
-> Requires a **development build** / `expo prebuild` (custom native code). Not available in Expo Go or on web.
+Uses **Tesseract** (`fas` / `pus` / `eng`) with **native black-and-white preprocessing** (grayscale + threshold) before recognition. Fully offline — no API calls.
+
+> Requires a **development build** / `expo prebuild`. Not available in Expo Go or on web.
 
 ---
 
 ## Install
 
 ```bash
-npx expo install rn-ocr-pro
+npx expo install rn-af-identity-ocr
 # or
-pnpm add rn-ocr-pro
+pnpm add rn-af-identity-ocr
 ```
-
-Add the config plugin (ensures JitPack is available for Android Tesseract):
 
 ```json
 {
   "expo": {
-    "plugins": ["rn-ocr-pro"]
+    "plugins": ["rn-af-identity-ocr"]
   }
 }
 ```
-
-This module includes native code. After installing:
 
 ```bash
 npx expo prebuild
@@ -38,114 +35,79 @@ npx expo run:android
 npx expo run:ios
 ```
 
-The default language pack (`fas`, `pus`, `eng`) is bundled — no extra model download required for primary languages.
-
-### Android repository (JitPack)
-
-The `rn-ocr-pro` config plugin adds JitPack automatically. If you skip the plugin and Gradle cannot resolve `cz.adaptech.tesseract4android`, add this via [`expo-build-properties`](https://docs.expo.dev/versions/latest/sdk/build-properties/):
-
-```json
-[
-  "expo-build-properties",
-  { "android": { "extraMavenRepos": ["https://jitpack.io"] } }
-]
-```
+The config plugin adds JitPack for Android Tesseract. Default language packs (`fas`, `pus`, `eng`) are bundled.
 
 ---
 
 ## Quick start
 
 ```ts
-import { recognizeAsync } from 'rn-ocr-pro';
+import {
+  scanETazkiraFront,
+  scanETazkiraBack,
+  scanPaperTazkira,
+  scanPassport,
+} from 'rn-af-identity-ocr';
 
-const result = await recognizeAsync(imageUri, {
-  languages: ['fas', 'pus', 'eng'], // default if omitted
-  normalizePersoArabic: true,       // default
-});
-
-console.log(result.fullText);
-console.log(result.meanConfidence);
-console.log(result.blocks);
+const front = await scanETazkiraFront(imageUri);
+console.log(front.documentType); // 'e_tazkira_front'
+console.log(front.fullText);
+console.log(front.meanConfidence);
 ```
 
-`imageUri` must be a local URI your app can read:
+Each scanner:
 
-- Android: `file://…` or `content://…` (e.g. from `expo-image-picker`)
-- iOS: `file://…`
+1. Downscales large images (max side 2000px)
+2. Converts to **black text on white** on native
+3. Runs Tesseract OCR
+4. Applies Perso-Arabic text normalization
 
 ---
 
-## API reference
+## API
 
-### `recognizeAsync(imageUri, options?)`
+| Function | `documentType` |
+|----------|----------------|
+| `scanETazkiraFront(uri)` | `e_tazkira_front` |
+| `scanETazkiraBack(uri)` | `e_tazkira_back` |
+| `scanPaperTazkira(uri)` | `paper_tazkira` |
+| `scanPassport(uri)` | `passport` |
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `languages` | `string[]` | `['fas','pus','eng']` | Tesseract language codes. Multiple codes are combined with `+`. |
-| `psm` | `number` | `3` | Page segmentation mode (auto). See [Tesseract PSM docs](https://tesseract-ocr.github.io/tessdoc/ImproveQuality.html#page-segmentation-method). |
-| `oem` | `number` | `1` | OCR engine mode. Use `1` (LSTM only) with the bundled `tessdata_fast` models. |
-| `minConfidence` | `number` | `0` | Drop lines below this confidence (0–100). |
-| `normalizePersoArabic` | `boolean` | `true` | Apply Perso-Arabic cleanup in JS after recognition. |
-
-### `OcrResult`
+### `ScanResult`
 
 ```ts
-type OcrResult = {
+type ScanResult = {
+  documentType: AfDocumentType;
   fullText: string;
   blocks: OcrBlock[];
-  meanConfidence: number;      // 0–100
+  meanConfidence: number; // 0–100
   engine: 'tesseract';
   languagesUsed: string[];
   durationMs: number;
 };
-
-type OcrBlock = {
-  text: string;
-  confidence: number;
-  bbox: { left: number; top: number; right: number; bottom: number };
-  lines: OcrLine[];
-};
 ```
 
-### `normalizePersoArabicText(text, options?)`
+Also exported: `normalizePersoArabicText`, `DEFAULT_OCR_LANGUAGES`, types.
 
-Exported helper used internally when `normalizePersoArabic` is enabled:
-
-- `ي` → `ی`, `ك` → `ک`
-- strips tatweel (`ـ`)
-- Persian/Arabic-Indic digits → ASCII (`۰۱۲` / `٠١٢` → `012`) unless `normalizeDigits: false`
-- whitespace cleanup + NFC
-
-### `DEFAULT_OCR_LANGUAGES`
-
-Constant: `['fas', 'pus', 'eng']`.
+`imageUri` must be a local `file://` or `content://` URI.
 
 ---
 
 ## Languages
 
-Bundled by default: **Persian (`fas`)**, **Pashto (`pus`)**, **English (`eng`)** (`tessdata_fast`).
+Default models: Persian (`fas`), Pashto (`pus`), English (`eng`).
 
-`languages` in `recognizeAsync` selects which Tesseract models to load — it does not auto-detect language.
+Passport scans prefer `eng+fas+pus`. Other document types use `fas+pus+eng`.
 
-**Adding another language** (download model → rebuild → pass the code): see **[docs/ADDING_LANGUAGES.md](docs/ADDING_LANGUAGES.md)**.
-
-```ts
-// after installing tur.traineddata (see docs)
-await recognizeAsync(uri, { languages: ['fas', 'eng', 'tur'] });
-```
+**Adding more languages:** see **[docs/ADDING_LANGUAGES.md](docs/ADDING_LANGUAGES.md)**.
 
 ---
 
-## Accuracy tips (Persian / Pashto)
+## Accuracy tips
 
-- Prefer **sharp, well-lit** photos; avoid blur and heavy shadows.
-- **Crop** to the text region when possible (less layout noise).
-- Aim for roughly **300 DPI** equivalent; very small text hurts LSTM accuracy.
-- Keep lines **horizontal**; deskew rotated pages before OCR.
-- For single-line fields (IDs, names), try `psm: 7` (single text line) or `psm: 6` (uniform block).
-- Mixed Persian + English: keep both `fas` and `eng` in `languages`.
-- Pashto-specific letters (ښ، ږ، ڼ، …) need `pus` in the language list — do not rely on `fas` alone.
+- Sharp, well-lit photos; crop to the document when possible
+- Keep the card/passport roughly upright
+- Native B&W helps printed black text; very low-contrast stamps may still be weak
 
 ---
 
@@ -157,31 +119,29 @@ pnpm install
 pnpm android   # or pnpm ios
 ```
 
-Use **Gallery** or **Camera** to choose an image, then tap **Recognize**. The demo uses `fas+pus+eng` with Perso-Arabic normalization.
+Pick a document type, then Gallery or Camera, then **Scan**.
 
 ---
 
 ## Platform notes
 
-| Platform | Engine | Notes |
-|----------|--------|--------|
-| Android | [Tesseract4Android](https://github.com/adaptech-cz/Tesseract4Android) | Bundled `assets/tessdata` copied to app files on first use |
-| iOS | [kta-tesseract-swift](https://github.com/kurzdigital/kta-tesseract-swift) (libtesseract) | Resource bundle `RnOcrProTessdata` + optional main-bundle `tessdata/` |
-| Web | — | Throws: not supported |
+| Platform | Engine | Preprocess |
+|----------|--------|------------|
+| Android | Tesseract4Android | Luminance + threshold |
+| iOS | kta-tesseract-swift | Grayscale + threshold |
+| Web | — | Unsupported |
 
 ---
 
 ## Troubleshooting
 
-| Symptom | Likely cause | Fix |
-|---------|--------------|-----|
-| `Missing Tesseract language data for: …` | `.traineddata` not bundled/copied | Run `scripts/download-tessdata.sh`, rebuild native app |
-| `Could not decode/load image` | Bad URI or unreadable content URI | Use `file://` / `content://` from a picker; grant permissions in the host app |
-| Low confidence / garbage text | Soft focus, tiny text, wrong language | Crop, improve lighting, set explicit `languages`, try `psm: 6` or `7` |
-| Module not found / null native module | Running in Expo Go | Use `expo prebuild` + `expo run:*` (dev client) |
-| Gradle cannot resolve `tesseract4android` | JitPack missing from repos | Add `"plugins": ["rn-ocr-pro"]` (or `expo-build-properties` extraMavenRepos) and re-prebuild |
-| iOS pod install issues with Tesseract | Static frameworks / pods | Clean `ios/Pods`, re-run `npx expo prebuild --clean` |
-| Web crash / reject | Web stub | OCR is native-only by design |
+| Symptom | Fix |
+|---------|-----|
+| Missing language data | See [ADDING_LANGUAGES.md](docs/ADDING_LANGUAGES.md); rebuild native |
+| Could not load/decode image | Use `file://` / `content://` from a picker |
+| Module not found | Use `expo prebuild` + `expo run:*` (not Expo Go) |
+| Gradle / tesseract4android | Ensure plugin `rn-af-identity-ocr` (JitPack) and re-prebuild |
+| `property is not writable` | Clear Metro cache; example metro pins a single Expo singleton |
 
 ---
 
@@ -191,7 +151,6 @@ Use **Gallery** or **Camera** to choose an image, then tap **Recognize**. The de
 pnpm install
 pnpm run build
 pnpm test
-./scripts/download-tessdata.sh   # refresh language packs
 ```
 
 ---

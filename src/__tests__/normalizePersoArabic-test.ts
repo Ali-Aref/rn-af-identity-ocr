@@ -1,3 +1,4 @@
+import type { AfDocumentType } from '../RnAfIdentityOcr.types';
 import { DEFAULT_OCR_LANGUAGES } from '../constants';
 import { normalizePersoArabicText } from '../normalizePersoArabic';
 
@@ -19,7 +20,7 @@ describe('normalizePersoArabicText', () => {
   });
 
   it('NFC-normalizes input', () => {
-    const composed = normalizePersoArabicText('ا\u0650'); // alef + kasra
+    const composed = normalizePersoArabicText('ا\u0650');
     expect(composed.normalize('NFC')).toBe(composed);
   });
 });
@@ -27,5 +28,17 @@ describe('normalizePersoArabicText', () => {
 describe('DEFAULT_OCR_LANGUAGES', () => {
   it('prioritizes Persian and Pashto with English', () => {
     expect([...DEFAULT_OCR_LANGUAGES]).toEqual(['fas', 'pus', 'eng']);
+  });
+});
+
+describe('AfDocumentType', () => {
+  it('covers the four Afghan identity document kinds', () => {
+    const types: AfDocumentType[] = [
+      'e_tazkira_front',
+      'e_tazkira_back',
+      'paper_tazkira',
+      'passport',
+    ];
+    expect(types).toHaveLength(4);
   });
 });

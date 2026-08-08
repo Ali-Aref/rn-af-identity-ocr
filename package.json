@@ -1,7 +1,7 @@
 {
-  "name": "rn-ocr-pro",
+  "name": "rn-af-identity-ocr",
   "version": "0.1.0",
-  "description": "On-device Expo OCR with high-confidence Persian and Pashto support (Tesseract)",
+  "description": "On-device Expo OCR for Afghan identity documents (e-Tazkira, paper Tazkira, passport)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "react-native": "src/index.ts",
@@ -20,11 +20,12 @@
     "expo",
     "ocr",
     "tesseract",
+    "afghanistan",
+    "tazkira",
+    "passport",
     "persian",
-    "farsi",
     "pashto",
-    "perso-arabic",
-    "rn-ocr-pro"
+    "rn-af-identity-ocr"
   ],
   "repository": "https://github.com/Ali-Aref/rn-ocr-pro",
   "bugs": {

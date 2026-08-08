@@ -4,6 +4,7 @@ import {
   Button,
   Image,
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,15 +12,31 @@ import {
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
-import { recognizeAsync, type OcrResult } from 'rn-ocr-pro';
+import {
+  scanETazkiraBack,
+  scanETazkiraFront,
+  scanPaperTazkira,
+  scanPassport,
+  type AfDocumentType,
+  type ScanResult,
+} from 'rn-af-identity-ocr';
+
+const DOC_OPTIONS: { type: AfDocumentType; label: string; scan: (uri: string) => Promise<ScanResult> }[] =
+  [
+    { type: 'e_tazkira_front', label: 'e-Tazkira front', scan: scanETazkiraFront },
+    { type: 'e_tazkira_back', label: 'e-Tazkira back', scan: scanETazkiraBack },
+    { type: 'paper_tazkira', label: 'Paper Tazkira', scan: scanPaperTazkira },
+    { type: 'passport', label: 'Passport', scan: scanPassport },
+  ];
 
 export default function App() {
   const cameraRef = useRef<CameraView>(null);
+  const [docType, setDocType] = useState<AfDocumentType>('e_tazkira_front');
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [showCamera, setShowCamera] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<OcrResult | null>(null);
+  const [result, setResult] = useState<ScanResult | null>(null);
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
 
   const selectImage = (uri: string) => {
@@ -67,18 +84,16 @@ export default function App() {
     }
   };
 
-  const onRecognize = async () => {
+  const onScan = async () => {
     if (!imageUri) return;
+    const entry = DOC_OPTIONS.find((d) => d.type === docType);
+    if (!entry) return;
+
     setLoading(true);
     setError(null);
     setResult(null);
     try {
-      const next = await recognizeAsync(imageUri, {
-        languages: ['fas', 'pus', 'eng'],
-        normalizePersoArabic: true,
-      });
-      console.log({ next })
-      setResult(next);
+      setResult(await entry.scan(imageUri));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -89,11 +104,26 @@ export default function App() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.header}>rn-ocr-pro</Text>
+        <Text style={styles.header}>rn-af-identity-ocr</Text>
         <Text style={styles.sub}>
-          On-device OCR (Persian / Pashto / English). Pick a photo or capture with
-          the camera, then run recognition.
+          Afghan ID OCR (native B&W preprocess). Pick a document type, then gallery or
+          camera.
         </Text>
+
+        <Text style={styles.sectionLabel}>Document type</Text>
+        <View style={styles.docRow}>
+          {DOC_OPTIONS.map((d) => (
+            <Pressable
+              key={d.type}
+              onPress={() => setDocType(d.type)}
+              style={[styles.docChip, docType === d.type && styles.docChipActive]}
+            >
+              <Text style={[styles.docChipText, docType === d.type && styles.docChipTextActive]}>
+                {d.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
 
         <View style={styles.row}>
           <View style={styles.rowBtn}>
@@ -113,8 +143,8 @@ export default function App() {
         )}
 
         <Button
-          title={loading ? 'Recognizing…' : 'Recognize'}
-          onPress={onRecognize}
+          title={loading ? 'Scanning…' : 'Scan'}
+          onPress={onScan}
           disabled={loading || !imageUri}
         />
 
@@ -124,6 +154,7 @@ export default function App() {
         {result ? (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Result</Text>
+            <Text>document: {result.documentType}</Text>
             <Text>engine: {result.engine}</Text>
             <Text>languages: {result.languagesUsed.join('+')}</Text>
             <Text>mean confidence: {result.meanConfidence.toFixed(1)}</Text>
@@ -151,6 +182,19 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 12 },
   header: { fontSize: 28, fontWeight: '700' },
   sub: { color: '#444', marginBottom: 8 },
+  sectionLabel: { fontWeight: '600', color: '#333' },
+  docRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  docChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
+  },
+  docChipActive: { backgroundColor: '#1a1a1a', borderColor: '#1a1a1a' },
+  docChipText: { color: '#333', fontSize: 13 },
+  docChipTextActive: { color: '#fff' },
   row: { flexDirection: 'row', gap: 12 },
   rowBtn: { flex: 1 },
   preview: {
