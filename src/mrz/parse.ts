@@ -1,7 +1,10 @@
 import { parse, type Details, type FieldName, type ParseResult } from 'mrz';
 
 import type { MrzField, MrzFieldKey, MrzWarning, PassportMrz } from '../RnAfIdentityOcr.types';
-import type { MrzCandidate } from './locate';
+import { normalizeMrzText, type MrzCandidate, type MrzFormat } from './locate';
+
+const LINE_LENGTH: Record<MrzFormat, number> = { TD1: 30, TD3: 44 };
+const LINE_COUNT: Record<MrzFormat, number> = { TD1: 3, TD3: 2 };
 
 const FIELD_MAP: { key: MrzFieldKey; mrz: FieldName; checkDigit?: FieldName }[] = [
   { key: 'documentNumber', mrz: 'documentNumber', checkDigit: 'documentNumberCheckDigit' },
@@ -42,21 +45,59 @@ function normalizeValue(key: MrzFieldKey, rawValue: string): string {
   return rawValue;
 }
 
+function fitLength(text: string, length: number): string {
+  if (text.length === length) return text;
+  if (text.length < length) return text.padEnd(length, '<');
+
+  let t = text;
+  while (t.length > length) {
+    const idx = t.lastIndexOf('<');
+    if (idx === -1) return t.slice(0, length);
+    t = t.slice(0, idx) + t.slice(idx + 1);
+  }
+  return t.length < length ? t.padEnd(length, '<') : t;
+}
+
+function sanitizeLines(candidate: MrzCandidate): string[] {
+  const expectedCount = LINE_COUNT[candidate.format];
+  const expectedLength = LINE_LENGTH[candidate.format];
+  const normalized = candidate.lines.map(normalizeMrzText).filter((line) => line.length > 0);
+
+  if (normalized.length === expectedCount) {
+    return normalized.map((line) => fitLength(line, expectedLength));
+  }
+
+  const compact = normalized.join('');
+  if (compact.length >= expectedCount * expectedLength) {
+    const lines: string[] = [];
+    for (let i = 0; i < expectedCount; i += 1) {
+      lines.push(compact.slice(i * expectedLength, (i + 1) * expectedLength));
+    }
+    return lines.map((line) => fitLength(line, expectedLength));
+  }
+
+  const padded = normalized.slice(-expectedCount);
+  while (padded.length < expectedCount) padded.unshift('');
+  return padded.map((line) => fitLength(line, expectedLength));
+}
+
 /** Never throws — bad zones return valid:false and empty fields. */
 export function parseMrz(candidate: MrzCandidate): PassportMrz {
+  const sanitizedLines = sanitizeLines(candidate);
   let result: ParseResult;
   try {
-    result = parse(candidate.lines, { autocorrect: true });
-  } catch {
+    result = parse(sanitizedLines, { autocorrect: true });
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : 'unknown parse error';
     return {
       format: candidate.format,
       valid: false,
-      lines: candidate.lines,
+      lines: sanitizedLines,
       fields: {},
       warnings: [
         {
           code: 'mrz_checksum_failed',
-          message: 'A machine-readable zone was located but could not be parsed.',
+          message: `A machine-readable zone was located but could not be parsed: ${reason}`,
         },
       ],
       confidence: Math.min(0.6, Math.max(0.3, candidate.confidence || 0.4)),
@@ -103,7 +144,7 @@ export function parseMrz(candidate: MrzCandidate): PassportMrz {
   return {
     format: candidate.format,
     valid: result.valid,
-    lines: candidate.lines,
+    lines: sanitizedLines,
     fields,
     warnings,
     confidence,

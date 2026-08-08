@@ -14,6 +14,8 @@ config.resolver.disableHierarchicalLookup = true;
 config.resolver.nodeModulesPaths = [
   path.resolve(projectRoot, 'node_modules'),
   path.resolve(projectRoot, 'node_modules/.pnpm/node_modules'),
+  path.resolve(workspaceRoot, 'node_modules'),
+  path.resolve(workspaceRoot, 'node_modules/.pnpm/node_modules'),
 ];
 
 const singleton = (name) => path.resolve(projectRoot, 'node_modules', name);

@@ -101,4 +101,23 @@ describe('passport MRZ locate + parse', () => {
     expect(parsed.valid).toBe(false);
     expect(parsed.warnings.some((w) => w.code === 'mrz_checksum_failed')).toBe(true);
   });
+
+  it('sanitizes hidden Unicode chars before parse so fields are still recovered', () => {
+    const parsed = parseMrz({
+      format: 'TD3',
+      confidence: 0.7,
+      lines: [
+        'P<AFGMOHAMMADZADA<<ALI<AREF<<<<<<<<<<<<<<<<<\u200E',
+        'PO76810009AFG9806098M3402214<<<<<<<<<<<<<<06',
+      ],
+    });
+
+    expect(parsed.lines[0]).toHaveLength(44);
+    expect(parsed.lines[1]).toHaveLength(44);
+    expect(parsed.fields.surname?.normalizedValue).toBe('MOHAMMADZADA');
+    expect(parsed.fields.givenNames?.normalizedValue).toBe('ALI AREF');
+    expect(parsed.fields.documentNumber?.normalizedValue).toBe('PO7681000');
+    // Still invalid due bad OCR check digit, but no hard parse failure.
+    expect(parsed.warnings.some((w) => w.message.includes('could not be parsed'))).toBe(false);
+  });
 });
