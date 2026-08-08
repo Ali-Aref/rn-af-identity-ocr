@@ -4,7 +4,6 @@ import {
   Button,
   Image,
   Modal,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -78,6 +77,7 @@ export default function App() {
         languages: ['fas', 'pus', 'eng'],
         normalizePersoArabic: true,
       });
+      console.log({ next })
       setResult(next);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -87,7 +87,7 @@ export default function App() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.header}>rn-ocr-pro</Text>
         <Text style={styles.sub}>
@@ -134,20 +134,20 @@ export default function App() {
       </ScrollView>
 
       <Modal visible={showCamera} animationType="slide">
-        <SafeAreaView style={styles.cameraScreen}>
+        <View style={styles.cameraScreen}>
           <CameraView ref={cameraRef} style={styles.camera} facing="back" />
           <View style={styles.cameraActions}>
             <Button title="Cancel" onPress={() => setShowCamera(false)} />
             <Button title="Capture" onPress={onCapture} />
           </View>
-        </SafeAreaView>
+        </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#eee' },
+  container: { flex: 1, paddingVertical: 16, backgroundColor: '#eee' },
   content: { padding: 20, gap: 12 },
   header: { fontSize: 28, fontWeight: '700' },
   sub: { color: '#444', marginBottom: 8 },

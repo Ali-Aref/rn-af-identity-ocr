@@ -124,43 +124,16 @@ Constant: `['fas', 'pus', 'eng']`.
 
 ## Languages
 
-### Bundled (high-confidence primary)
+Bundled by default: **Persian (`fas`)**, **Pashto (`pus`)**, **English (`eng`)** (`tessdata_fast`).
 
-| Code | Language | Notes |
-|------|----------|--------|
-| `fas` | Persian (Farsi/Dari) | Primary |
-| `pus` | Pashto | Primary |
-| `eng` | English | Always useful for mixed documents |
+`languages` in `recognizeAsync` selects which Tesseract models to load — it does not auto-detect language.
 
-Models are **`tessdata_fast`** (LSTM). Good mobile size/speed tradeoff.
-
-### Adding other languages
-
-1. Download a `.traineddata` file from [`tessdata_fast`](https://github.com/tesseract-ocr/tessdata_fast) (recommended) or [`tessdata_best`](https://github.com/tesseract-ocr/tessdata_best) (more accurate, larger).
-2. Place it where the native layer can find it:
-
-**Option A — ship inside a fork / local module**
-
-```bash
-./scripts/download-tessdata.sh ara fra
-# copies into tessdata/, android assets, and ios Resources
-```
-
-**Option B — at runtime / app resources**
-
-- **Android:** copy `xx.traineddata` into the app files dir under  
-  `{filesDir}/tesseract/tessdata/`  
-  (the module also auto-copies anything under its bundled `assets/tessdata/`).
-- **iOS:** add a `tessdata` folder (folder reference) to the app bundle with your `.traineddata` files, **or** copy into  
-  `Application Support/tesseract/tessdata/` before calling OCR.
-
-3. Pass the code in options:
+**Adding another language** (download model → rebuild → pass the code): see **[docs/ADDING_LANGUAGES.md](docs/ADDING_LANGUAGES.md)**.
 
 ```ts
-await recognizeAsync(uri, { languages: ['fas', 'ara', 'eng'] });
+// after installing tur.traineddata (see docs)
+await recognizeAsync(uri, { languages: ['fas', 'eng', 'tur'] });
 ```
-
-If a requested language file is missing, recognition throws a clear error naming the missing code(s).
 
 ---
 
