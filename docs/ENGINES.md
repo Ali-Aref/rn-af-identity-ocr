@@ -50,12 +50,13 @@ Before either engine:
 
 PP-OCR expects ImageNet-normalized RGB. Default leaves color as-is; pass `{ manipulateColors: true }` to force B&W.
 
-## Passport MRZ
+## Passport / e-Tazkira back MRZ
 
-`scanPassport` runs Latin OCR then the same TS flow as `af-identity-scanner`:
+`scanPassport` and `scanETazkiraBack` run Latin OCR then the same TS flow as `af-identity-scanner`:
 
-1. `locateMrz` — bottom chevron lines (TD3 = 2×44), with merges/splits repaired
+1. `locateMrz` — bottom chevron lines (TD3 = 2×44 passport, TD1 = 3×30 e-Tazkira back), with merges/splits repaired
 2. `parseMrz` — `mrz` package + check-digit autocorrect → structured fields
+   (TD1 `optional1` is surfaced as `personalNumber`)
 
 See `src/mrz/locate.ts` and `src/mrz/parse.ts`.
 

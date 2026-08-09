@@ -109,20 +109,29 @@ export function parseMrz(candidate: MrzCandidate): PassportMrz {
 
   for (const { key, mrz, checkDigit } of FIELD_MAP) {
     const detail = detailFor(result, mrz);
-    // Prefer fields; fall back to detail.value when a failed check nulls the field.
-    const rawValue = result.fields[mrz] ?? detail?.value;
+    // TD3 uses personalNumber; TD1 puts the remainder of the ID in optional1.
+    const rawValue =
+      result.fields[mrz] ??
+      (mrz === 'personalNumber' ? result.fields.optional1 : undefined) ??
+      detail?.value;
     if (rawValue === null || rawValue === undefined || rawValue === '') continue;
 
     let confidence: number;
     if (checkDigit) {
-      const checkValid = detailFor(result, checkDigit)?.valid ?? false;
-      confidence = checkValid ? 0.97 : 0.45;
-      if (!checkValid) {
-        warnings.push({
-          code: 'mrz_checksum_failed',
-          message: `The check digit for ${key} did not validate; verify this value.`,
-          field: key,
-        });
+      const check = detailFor(result, checkDigit);
+      if (!check) {
+        // Format has no check digit for this field (e.g. TD1 optional1 → personalNumber).
+        confidence = 0.85;
+      } else {
+        const checkValid = check.valid ?? false;
+        confidence = checkValid ? 0.97 : 0.45;
+        if (!checkValid) {
+          warnings.push({
+            code: 'mrz_checksum_failed',
+            message: `The check digit for ${key} did not validate; verify this value.`,
+            field: key,
+          });
+        }
       }
     } else {
       const fieldValid = detail?.valid ?? true;

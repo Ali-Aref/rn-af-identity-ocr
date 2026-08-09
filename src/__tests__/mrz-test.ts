@@ -7,6 +7,13 @@ const TD3_PASSPORT = [
   'OR12345677AFG9501016M3001019<<<<<<<<<<<<<<02',
 ];
 
+/** Real AF e-Tazkira back specimen (Nematulla GHULAMI); TD1 3×30. */
+const TD1_TAZKIRA_BACK = [
+  'I<AFG13991204<573308<<<<<<<<<<',
+  '9803215M3103119AFG<<<<<<<<<<<3',
+  'GHULAMI<<NEMATULLA<<<<<<<<<<<<',
+];
+
 function linesFromMrz(
   mrzLines: string[],
   visible: string[] = ['PASSPORT']
@@ -69,6 +76,25 @@ describe('passport MRZ locate + parse', () => {
     });
     expect(candidate?.format).toBe('TD3');
     expect(parseMrz(candidate!).fields.surname?.normalizedValue).toBe('AHMADI');
+  });
+
+  it('extracts TD1 identity fields from e-Tazkira back specimen', () => {
+    const candidate = locateMrz({ lines: linesFromMrz(TD1_TAZKIRA_BACK, ['NATIONAL IDENTITY']) });
+    expect(candidate?.format).toBe('TD1');
+    expect(candidate?.lines).toHaveLength(3);
+
+    const parsed = parseMrz(candidate!);
+    expect(parsed.valid).toBe(true);
+    // ICAO TD1 stores first 9 of the 13-digit ID; remainder is optional1 → personalNumber.
+    expect(parsed.fields.documentNumber?.normalizedValue).toBe('13991204');
+    expect(parsed.fields.personalNumber?.normalizedValue).toBe('73308');
+    expect(parsed.fields.surname?.normalizedValue).toBe('GHULAMI');
+    expect(parsed.fields.givenNames?.normalizedValue).toBe('NEMATULLA');
+    expect(parsed.fields.nationality?.normalizedValue).toBe('AFG');
+    expect(parsed.fields.dateOfBirth?.normalizedValue).toBe('1998-03-21');
+    expect(parsed.fields.dateOfExpiry?.normalizedValue).toBe('2031-03-11');
+    expect(parsed.fields.sex?.normalizedValue).toBe('M');
+    expect(parsed.warnings).toHaveLength(0);
   });
 
   it('returns null when no chevron MRZ lines exist', () => {

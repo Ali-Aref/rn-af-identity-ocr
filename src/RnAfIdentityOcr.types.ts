@@ -67,7 +67,7 @@ export type OcrResult = {
 
 export type ScanResult = OcrResult & {
   documentType: AfDocumentType;
-  /** Present on passport scans when an MRZ could be located (null if not found). */
+  /** Present on passport / e-Tazkira back when an MRZ could be located (null if not found). */
   mrz?: PassportMrz | null;
 };
 

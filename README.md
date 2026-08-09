@@ -77,7 +77,7 @@ Each scanner:
 4. Writes / returns `processedImageUri` (original URI for default Latin; cache PNG when preprocessed)
 5. Runs the script-specific OCR engine
 6. Applies Perso-Arabic text normalization only for Persian-script results (Latin/MRZ left raw)
-7. **Passport only:** locates and parses the MRZ (ICAO TD3/TD1) into structured fields
+7. **Passport / e-Tazkira back:** locates and parses the MRZ (ICAO TD3 / TD1) into structured fields
 
 ---
 
@@ -113,7 +113,7 @@ type ScanResult = {
   scriptUsed: 'latin' | 'arabic' | 'persian';
   durationMs: number;
   processedImageUri: string | null;
-  /** Passport only: parsed MRZ, or null if not located. */
+  /** Passport / e-Tazkira back: parsed MRZ, or null if not located. */
   mrz?: PassportMrz | null;
 };
 
@@ -134,7 +134,7 @@ Also exported: `normalizePersoArabicText`, `locateMrz`, `parseMrz`, types.
 
 `imageUri` must be a local `file://` or `content://` URI.
 
-Passport returns raw OCR **plus** on-device MRZ parse (same `locateMrz` → `parseMrz` flow as `af-identity-scanner`, using the `mrz` package with check-digit autocorrect). Locate also resegments merged/split OCR lines, which is common on device.
+Passport and e-Tazkira back return raw OCR **plus** on-device MRZ parse (same `locateMrz` → `parseMrz` flow as `af-identity-scanner`, using the `mrz` package with check-digit autocorrect). Locate also resegments merged/split OCR lines, which is common on device.
 
 MRZ fields: `documentNumber`, `surname`, `givenNames`, `nationality`, `dateOfBirth`, `sex`, `dateOfExpiry`, `personalNumber`.
 

@@ -81,12 +81,15 @@ function nativeToOcrResult(raw: NativeOcrResult): OcrResult {
   };
 }
 
-function extractPassportMrz(raw: NativeOcrResult): PassportMrz | null {
+function extractMrz(raw: NativeOcrResult): PassportMrz | null {
   // Same entry as af-identity-scanner: locateMrz(recognition) → parseMrz(candidate).
+  // Passport = TD3 (2×44); e-Tazkira back = TD1 (3×30).
   const candidate = locateMrz({ lines: raw.lines });
   if (!candidate) return null;
   return parseMrz(candidate);
 }
+
+const MRZ_DOCUMENTS = new Set<AfDocumentType>(['passport', 'e_tazkira_back']);
 
 /** Internal: optional BW preprocess + scripted OCR + Perso-Arabic normalize. */
 async function recognizeForDocument(
@@ -107,8 +110,8 @@ async function recognizeForDocument(
   });
 
   const base: ScanResult = { ...nativeToOcrResult(raw), documentType };
-  if (documentType === 'passport') {
-    base.mrz = extractPassportMrz(raw);
+  if (MRZ_DOCUMENTS.has(documentType)) {
+    base.mrz = extractMrz(raw);
   }
   return base;
 }

@@ -172,8 +172,9 @@ export default function App() {
               </>
             ) : null}
             <Text style={styles.ocrText}>{result.fullText || '(empty)'}</Text>
-            {result.documentType === 'passport' ? (
+            {result.documentType === 'passport' || result.documentType === 'e_tazkira_back' ? (
               <View style={{ marginTop: 12, gap: 4 }}>
+                <View style={styles.divider} />
                 <Text style={styles.sectionLabel}>MRZ</Text>
                 {result.mrz ? (
                   <>
@@ -181,10 +182,10 @@ export default function App() {
                       format: {result.mrz.format} · valid: {String(result.mrz.valid)} · conf:{' '}
                       {result.mrz.confidence.toFixed(2)}
                     </Text>
-                    {Object.entries(result.mrz.fields).map(([key, field]) =>
+                    {Object.entries(result.mrz.fields).map(([key, field], idx) =>
                       field ? (
                         <Text key={key}>
-                          {key}: {field.normalizedValue}
+                         {idx + 1} --- {key} --- {field.normalizedValue}
                         </Text>
                       ) : null
                     )}
@@ -276,4 +277,10 @@ const styles = StyleSheet.create({
     padding: 16,
     backgroundColor: '#111',
   },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    width: "100%",
+    backgroundColor: "#ccc",
+    marginVertical: 12,
+  }
 });
