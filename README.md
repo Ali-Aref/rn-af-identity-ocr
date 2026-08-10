@@ -221,6 +221,29 @@ pnpm run build
 pnpm test
 ```
 
+Repo: [Ali-Aref/rn-af-identity-ocr](https://github.com/Ali-Aref/rn-af-identity-ocr).
+
+### Publish (GitHub Packages)
+
+```bash
+export GITHUB_TOKEN=ghp_...   # classic PAT: write:packages + read:packages + repo
+pnpm pack --dry-run           # verify allowlist (build + android/src + ios; no src/)
+pnpm publish
+```
+
+Package stays private when this GitHub repo is private. Do **not** publish to npmjs.com.
+
+### Install in CI (consumer repos)
+
+```yaml
+- run: |
+    echo "@ali-aref:registry=https://npm.pkg.github.com" >> .npmrc
+    echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+- run: pnpm install
+```
+
+Same-user private repos can use `secrets.GITHUB_TOKEN`. Otherwise use a PAT secret with `read:packages` + `repo`.
+
 ---
 
 ## License

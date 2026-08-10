@@ -1,14 +1,16 @@
 # PP-OCR models
 
-Bundled for Arabic-script OCR (Dari / Pashto / Persian):
+Dev source copies for Arabic-script OCR (Dari / Pashto / Persian) in `@ali-aref/rn-af-identity-ocr`.
 
 - `PP-OCRv5_mobile_det.onnx` — detection
 - `arabic_PP-OCRv5_mobile_rec.onnx` — recognition
 - `ppocrv5_arabic_dict.txt` — charset for CTC decode
 
-Copied into:
+Runtime copies (what the GitHub Packages tarball ships):
 
 - `android/src/main/assets/models/`
 - `ios/models/`
+
+This folder is **not** included in the published package — keep android/ios in sync after changing models.
 
 See [docs/ENGINES.md](../docs/ENGINES.md).

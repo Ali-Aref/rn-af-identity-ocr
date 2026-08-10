@@ -1,6 +1,6 @@
 # Engines and models
 
-`rn-af-identity-ocr` does **not** use Tesseract. It routes by document type to one of two on-device engines (same approach as `af-identity-scanner`).
+`@ali-aref/rn-af-identity-ocr` does **not** use Tesseract. It routes by document type to one of two on-device engines (same approach as `af-identity-scanner`).
 
 ## Script routing
 
@@ -34,9 +34,9 @@ Front and paper scanners request script `persian`; native still loads that same 
 
 Locations in this repo:
 
-- Source / shared: [`assets/models/`](../assets/models/)
-- Android assets: `android/src/main/assets/models/`
-- iOS pod resources: `ios/models/`
+- Source / shared (dev only, not shipped in the published package): [`assets/models/`](../assets/models/)
+- Android assets (published): `android/src/main/assets/models/`
+- iOS pod resources (published): `ios/models/`
 
 Detection uses a probability heatmap (axis-aligned boxes). Recognition crops each box to height 48 and CTC-decodes. RTL lines are whole-string reversed after decode.
 
