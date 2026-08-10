@@ -4,11 +4,11 @@ Pod::Spec.new do |s|
   s.summary        = 'On-device OCR for Afghan identity documents (ML Kit/Vision + PP-OCR)'
   s.description    = 'Latin OCR via Vision and Arabic-script OCR via PP-OCRv5 ONNX, with optional B&W preprocess'
   s.author         = 'Ali Aref'
-  s.homepage       = 'https://github.com/Ali-Aref/rn-ocr-pro'
+  s.homepage       = 'https://github.com/Ali-Aref/rn-af-identity-ocr'
   s.platforms      = {
     :ios => '16.4'
   }
-  s.source         = { git: 'https://github.com/Ali-Aref/rn-ocr-pro.git' }
+  s.source         = { git: 'https://github.com/Ali-Aref/rn-af-identity-ocr.git' }
   s.static_framework = true
   s.swift_version  = '5.0'
   s.license        = 'MIT'

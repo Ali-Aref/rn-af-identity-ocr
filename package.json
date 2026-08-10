@@ -1,18 +1,29 @@
 {
-  "name": "rn-af-identity-ocr",
+  "name": "@ali-aref/rn-af-identity-ocr",
   "version": "0.1.0",
   "description": "On-device Expo OCR for Afghan identity documents (ML Kit/Vision + PP-OCR, optional B&W preprocess)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
-  "react-native": "src/index.ts",
+  "react-native": "build/index.js",
+  "files": [
+    "build/**/*.js",
+    "build/**/*.d.ts",
+    "android/build.gradle",
+    "android/src",
+    "ios",
+    "app.plugin.js",
+    "expo-module.config.json"
+  ],
   "scripts": {
     "build": "node internal/module_scripts/build.js",
     "clean": "node internal/module_scripts/clean.js",
     "lint": "eslint src/",
     "test": "node internal/module_scripts/test.js",
     "prepare": "node internal/module_scripts/prepare.js",
+    "prepack": "node internal/module_scripts/prepare.js",
     "open:ios": "node internal/module_scripts/open-ios.js",
-    "open:android": "node internal/module_scripts/open-android.js"
+    "open:android": "node internal/module_scripts/open-android.js",
+    "pack:check": "npm pack --dry-run"
   },
   "keywords": [
     "react-native",
@@ -30,13 +41,19 @@
     "pashto",
     "rn-af-identity-ocr"
   ],
-  "repository": "https://github.com/Ali-Aref/rn-ocr-pro",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ali-Aref/rn-af-identity-ocr.git"
+  },
   "bugs": {
-    "url": "https://github.com/Ali-Aref/rn-ocr-pro/issues"
+    "url": "https://github.com/Ali-Aref/rn-af-identity-ocr/issues"
   },
   "author": "Ali Aref <aliaref.dev@gmail.com> (https://github.com/Ali-Aref)",
   "license": "MIT",
-  "homepage": "https://github.com/Ali-Aref/rn-ocr-pro#readme",
+  "homepage": "https://github.com/Ali-Aref/rn-af-identity-ocr#readme",
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "dependencies": {
     "mrz": "^5.0.2"
   },

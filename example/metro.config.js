@@ -21,7 +21,7 @@ config.resolver.nodeModulesPaths = [
 const singleton = (name) => path.resolve(projectRoot, 'node_modules', name);
 
 config.resolver.extraNodeModules = {
-  'rn-af-identity-ocr': workspaceRoot,
+  '@ali-aref/rn-af-identity-ocr': workspaceRoot,
   react: singleton('react'),
   'react-native': singleton('react-native'),
   expo: singleton('expo'),

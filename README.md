@@ -1,6 +1,6 @@
-# rn-af-identity-ocr
+# @ali-aref/rn-af-identity-ocr
 
-On-device OCR for **Afghan identity documents** in React Native / Expo:
+Private on-device OCR for **Afghan identity documents** in React Native / Expo (GitHub Packages):
 
 - e-Tazkira front / back
 - Paper Tazkira
@@ -21,16 +21,43 @@ Optional **native black-and-white preprocess** (`manipulateColors`, default `fal
 
 ## Install
 
+Published privately to **GitHub Packages** as `@ali-aref/rn-af-identity-ocr` (not npmjs.com).
+
+### Auth (local)
+
+1. Create a classic PAT with `read:packages` (and `write:packages` if you publish).
+2. Export it (do not commit the token):
+
 ```bash
-npx expo install rn-af-identity-ocr
-# or
-pnpm add rn-af-identity-ocr
+export GITHUB_TOKEN=ghp_your_token_here
+```
+
+3. Put the scope registry in the **project** `.npmrc` (safe to commit):
+
+```ini
+@ali-aref:registry=https://npm.pkg.github.com
+```
+
+4. Put the token in your **user** `~/.npmrc` (never commit this):
+
+```ini
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+(`pnpm` will not expand `${GITHUB_TOKEN}` from a project-level `.npmrc`.)
+
+Public packages (`react`, `expo`, etc.) still resolve from npmjs.org.
+
+### Add the dependency
+
+```bash
+pnpm add @ali-aref/rn-af-identity-ocr
 ```
 
 ```json
 {
   "expo": {
-    "plugins": ["rn-af-identity-ocr"]
+    "plugins": ["@ali-aref/rn-af-identity-ocr"]
   }
 }
 ```
@@ -54,7 +81,7 @@ import {
   scanETazkiraBack,
   scanPaperTazkira,
   scanPassport,
-} from 'rn-af-identity-ocr';
+} from '@ali-aref/rn-af-identity-ocr';
 
 const front = await scanETazkiraFront(imageUri);
 console.log(front.documentType); // 'e_tazkira_front'

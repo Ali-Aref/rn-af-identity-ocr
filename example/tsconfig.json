@@ -3,8 +3,8 @@
   "compilerOptions": {
     "strict": true,
     "paths": {
-      "rn-af-identity-ocr": ["../src/index"],
-      "rn-af-identity-ocr/*": ["../src/*"]
+      "@ali-aref/rn-af-identity-ocr": ["../src/index"],
+      "@ali-aref/rn-af-identity-ocr/*": ["../src/*"]
     }
   }
 }
