@@ -1,10 +1,20 @@
 import { parse, type Details, type FieldName, type ParseResult } from 'mrz';
 
-import type { MrzField, MrzFieldKey, MrzWarning, PassportMrz } from '../RnAfIdentityOcr.types';
+import type {
+  DocumentMrz,
+  MrzField,
+  MrzFieldKey,
+  MrzIdentityFields,
+  MrzWarning,
+  Td1Mrz,
+  Td3Mrz,
+} from '../RnAfIdentityOcr.types';
 import { normalizeMrzText, type MrzCandidate, type MrzFormat } from './locate';
 
 const LINE_LENGTH: Record<MrzFormat, number> = { TD1: 30, TD3: 44 };
 const LINE_COUNT: Record<MrzFormat, number> = { TD1: 3, TD3: 2 };
+
+type MrzFields = MrzIdentityFields & { personalNumber?: MrzField };
 
 const FIELD_MAP: { key: MrzFieldKey; mrz: FieldName; checkDigit?: FieldName }[] = [
   { key: 'documentNumber', mrz: 'documentNumber', checkDigit: 'documentNumberCheckDigit' },
@@ -81,18 +91,37 @@ function sanitizeLines(candidate: MrzCandidate): string[] {
   return padded.map((line) => fitLength(line, expectedLength));
 }
 
+function toDocumentMrz(
+  format: MrzFormat,
+  lines: string[],
+  rest: { valid: boolean; fields: MrzFields; warnings: MrzWarning[]; confidence: number }
+): DocumentMrz {
+  if (format === 'TD1') {
+    const td1: Td1Mrz = {
+      format: 'TD1',
+      lines: [lines[0] ?? '', lines[1] ?? '', lines[2] ?? ''],
+      ...rest,
+    };
+    return td1;
+  }
+  const td3: Td3Mrz = {
+    format: 'TD3',
+    lines: [lines[0] ?? '', lines[1] ?? ''],
+    ...rest,
+  };
+  return td3;
+}
+
 /** Never throws — bad zones return valid:false and empty fields. */
-export function parseMrz(candidate: MrzCandidate): PassportMrz {
+export function parseMrz(candidate: MrzCandidate): DocumentMrz {
   const sanitizedLines = sanitizeLines(candidate);
   let result: ParseResult;
   try {
     result = parse(sanitizedLines, { autocorrect: true });
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'unknown parse error';
-    return {
-      format: candidate.format,
+    return toDocumentMrz(candidate.format, sanitizedLines, {
       valid: false,
-      lines: sanitizedLines,
       fields: {},
       warnings: [
         {
@@ -101,10 +130,10 @@ export function parseMrz(candidate: MrzCandidate): PassportMrz {
         },
       ],
       confidence: Math.min(0.6, Math.max(0.3, candidate.confidence || 0.4)),
-    };
+    });
   }
 
-  const fields: Partial<Record<MrzFieldKey, MrzField>> = {};
+  const fields: MrzFields = {};
   const warnings: MrzWarning[] = [];
 
   for (const { key, mrz, checkDigit } of FIELD_MAP) {
@@ -150,12 +179,10 @@ export function parseMrz(candidate: MrzCandidate): PassportMrz {
     ? Math.max(0.9, candidate.confidence)
     : Math.min(0.7, Math.max(0.45, candidate.confidence || 0.5));
 
-  return {
-    format: candidate.format,
+  return toDocumentMrz(candidate.format, sanitizedLines, {
     valid: result.valid,
-    lines: sanitizedLines,
     fields,
     warnings,
     confidence,
-  };
+  });
 }

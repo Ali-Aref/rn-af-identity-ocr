@@ -113,21 +113,15 @@ type ScanResult = {
   scriptUsed: 'latin' | 'arabic' | 'persian';
   durationMs: number;
   processedImageUri: string | null;
-  /** Passport / e-Tazkira back: parsed MRZ, or null if not located. */
-  mrz?: PassportMrz | null;
+  /** Passport (TD3) / e-Tazkira back (TD1); null if not located. Narrow on `format`. */
+  mrz?: DocumentMrz | null;
 };
 
-type PassportMrz = {
-  format: 'TD1' | 'TD3';
-  valid: boolean;
-  confidence: number; // 0..1
-  lines: string[];
-  fields: Partial<Record<MrzFieldKey, MrzField>>;
-  warnings: MrzWarning[];
-};
-
-// MRZ fields: documentNumber, surname, givenNames, nationality,
-// dateOfBirth, sex, dateOfExpiry, personalNumber
+// Discriminated on format:
+type Td1Mrz = { format: 'TD1'; lines: [string, string, string]; fields: MrzIdentityFields & { personalNumber?: MrzField }; ... };
+type Td3Mrz = { format: 'TD3'; lines: [string, string]; fields: MrzIdentityFields & { personalNumber?: MrzField }; ... };
+type DocumentMrz = Td1Mrz | Td3Mrz;
+// PassportMrz is a deprecated alias of DocumentMrz.
 ```
 
 Also exported: `normalizePersoArabicText`, `locateMrz`, `parseMrz`, types.
@@ -136,7 +130,8 @@ Also exported: `normalizePersoArabicText`, `locateMrz`, `parseMrz`, types.
 
 Passport and e-Tazkira back return raw OCR **plus** on-device MRZ parse (same `locateMrz` → `parseMrz` flow as `af-identity-scanner`, using the `mrz` package with check-digit autocorrect). Locate also resegments merged/split OCR lines, which is common on device.
 
-MRZ fields: `documentNumber`, `surname`, `givenNames`, `nationality`, `dateOfBirth`, `sex`, `dateOfExpiry`, `personalNumber`.
+Shared MRZ fields: `documentNumber`, `surname`, `givenNames`, `nationality`, `dateOfBirth`, `sex`, `dateOfExpiry`.  
+`personalNumber` is optional on both: on TD1 it is the e-Tazkira ID suffix (`optional1`); on TD3 it is the personal-number zone (often empty on AF passports).
 
 ---
 

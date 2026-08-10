@@ -6,7 +6,7 @@ import type {
   OcrLine,
   OcrResult,
   OcrScript,
-  PassportMrz,
+  DocumentMrz,
   ScanOptions,
   ScanResult,
 } from './RnAfIdentityOcr.types';
@@ -81,7 +81,7 @@ function nativeToOcrResult(raw: NativeOcrResult): OcrResult {
   };
 }
 
-function extractMrz(raw: NativeOcrResult): PassportMrz | null {
+function extractMrz(raw: NativeOcrResult): DocumentMrz | null {
   // Same entry as af-identity-scanner: locateMrz(recognition) → parseMrz(candidate).
   // Passport = TD3 (2×44); e-Tazkira back = TD1 (3×30).
   const candidate = locateMrz({ lines: raw.lines });

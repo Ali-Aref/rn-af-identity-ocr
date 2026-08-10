@@ -93,8 +93,10 @@ export default function App() {
     setError(null);
     setResult(null);
     try {
-      setResult(await entry.scan(imageUri));
-      console.log({ result })
+      // const res = await entry.scan(imageUri)
+      const res = await scanETazkiraFront(imageUri, { manipulateColors: true })
+      setResult(res);
+      console.log({ result: res })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {

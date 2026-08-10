@@ -67,8 +67,11 @@ export type OcrResult = {
 
 export type ScanResult = OcrResult & {
   documentType: AfDocumentType;
-  /** Present on passport / e-Tazkira back when an MRZ could be located (null if not found). */
-  mrz?: PassportMrz | null;
+  /**
+   * Present on passport (TD3) / e-Tazkira back (TD1) when an MRZ could be located.
+   * Narrow with `mrz.format === 'TD1' | 'TD3'`.
+   */
+  mrz?: DocumentMrz | null;
 };
 
 export type MrzFieldKey =
@@ -94,15 +97,53 @@ export type MrzWarning = {
   field?: MrzFieldKey;
 };
 
-export type PassportMrz = {
-  format: 'TD1' | 'TD3';
+/** Identity fields present on both TD1 (e-Tazkira back) and TD3 (passport). */
+export type MrzIdentityFields = {
+  documentNumber?: MrzField;
+  surname?: MrzField;
+  givenNames?: MrzField;
+  nationality?: MrzField;
+  dateOfBirth?: MrzField;
+  sex?: MrzField;
+  dateOfExpiry?: MrzField;
+};
+
+type MrzResultBase = {
   valid: boolean;
   /** 0..1 */
   confidence: number;
-  lines: string[];
-  fields: Partial<Record<MrzFieldKey, MrzField>>;
   warnings: MrzWarning[];
 };
+
+/**
+ * e-Tazkira back — ICAO TD1 (3×30).
+ * `personalNumber` is TD1 optional1: trailing digits of the 13-digit ID.
+ */
+export type Td1Mrz = MrzResultBase & {
+  format: 'TD1';
+  lines: [string, string, string];
+  fields: MrzIdentityFields & {
+    personalNumber?: MrzField;
+  };
+};
+
+/**
+ * Passport — ICAO TD3 (2×44).
+ * `personalNumber` is the TD3 personal-number zone; often absent on AF passports.
+ */
+export type Td3Mrz = MrzResultBase & {
+  format: 'TD3';
+  lines: [string, string];
+  fields: MrzIdentityFields & {
+    personalNumber?: MrzField;
+  };
+};
+
+/** Parsed MRZ for either supported document; discriminate on `format`. */
+export type DocumentMrz = Td1Mrz | Td3Mrz;
+
+/** @deprecated Prefer `DocumentMrz` (covers TD1 e-Tazkira back and TD3 passport). */
+export type PassportMrz = DocumentMrz;
 
 /** Options shared by all document scanners. */
 export type ScanOptions = {

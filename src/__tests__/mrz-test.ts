@@ -84,6 +84,9 @@ describe('passport MRZ locate + parse', () => {
     expect(candidate?.lines).toHaveLength(3);
 
     const parsed = parseMrz(candidate!);
+    expect(parsed.format).toBe('TD1');
+    if (parsed.format !== 'TD1') return;
+    expect(parsed.lines).toHaveLength(3);
     expect(parsed.valid).toBe(true);
     // ICAO TD1 stores first 9 of the 13-digit ID; remainder is optional1 → personalNumber.
     expect(parsed.fields.documentNumber?.normalizedValue).toBe('13991204');
@@ -95,6 +98,16 @@ describe('passport MRZ locate + parse', () => {
     expect(parsed.fields.dateOfExpiry?.normalizedValue).toBe('2031-03-11');
     expect(parsed.fields.sex?.normalizedValue).toBe('M');
     expect(parsed.warnings).toHaveLength(0);
+  });
+
+  it('types TD3 passport without requiring personalNumber', () => {
+    const parsed = parseMrz(locateMrz({ lines: linesFromMrz(TD3_PASSPORT) })!);
+    expect(parsed.format).toBe('TD3');
+    if (parsed.format !== 'TD3') return;
+    expect(parsed.lines).toHaveLength(2);
+    expect(parsed.fields.documentNumber?.normalizedValue).toBe('OR1234567');
+    // AF passport specimens usually leave the personal-number zone blank.
+    expect(parsed.fields.personalNumber).toBeUndefined();
   });
 
   it('returns null when no chevron MRZ lines exist', () => {
