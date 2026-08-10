@@ -1,12 +1,12 @@
 # PP-OCR models
 
-Dev source copies for Arabic-script OCR (Dari / Pashto / Persian) in `@ali-aref/rn-af-identity-ocr`.
+Dev source copies for Arabic-script OCR (Dari / Pashto / Persian) in `rn-af-identity-ocr`.
 
 - `PP-OCRv5_mobile_det.onnx` — detection
 - `arabic_PP-OCRv5_mobile_rec.onnx` — recognition
 - `ppocrv5_arabic_dict.txt` — charset for CTC decode
 
-Runtime copies (what the GitHub Packages tarball ships):
+Runtime copies (what the npm tarball ships):
 
 - `android/src/main/assets/models/`
 - `ios/models/`

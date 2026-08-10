@@ -1,6 +1,6 @@
 # Engines and models
 
-`@ali-aref/rn-af-identity-ocr` does **not** use Tesseract. It routes by document type to one of two on-device engines (same approach as `af-identity-scanner`).
+`rn-af-identity-ocr` does **not** use Tesseract. It routes by document type to one of two on-device engines (same approach as `af-identity-scanner`).
 
 ## Script routing
 

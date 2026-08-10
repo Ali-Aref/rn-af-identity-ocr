@@ -1,5 +1,5 @@
 {
-  "name": "@ali-aref/rn-af-identity-ocr",
+  "name": "rn-af-identity-ocr",
   "version": "0.1.0",
   "description": "On-device Expo OCR for Afghan identity documents (ML Kit/Vision + PP-OCR, optional B&W preprocess)",
   "main": "build/index.js",
@@ -51,9 +51,6 @@
   "author": "Ali Aref <aliaref.dev@gmail.com> (https://github.com/Ali-Aref)",
   "license": "MIT",
   "homepage": "https://github.com/Ali-Aref/rn-af-identity-ocr#readme",
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
   "dependencies": {
     "mrz": "^5.0.2"
   },

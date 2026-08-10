@@ -1,6 +1,6 @@
-# @ali-aref/rn-af-identity-ocr
+# rn-af-identity-ocr
 
-Private on-device OCR for **Afghan identity documents** in React Native / Expo (GitHub Packages):
+On-device OCR for **Afghan identity documents** in React Native / Expo:
 
 - e-Tazkira front / back
 - Paper Tazkira
@@ -21,43 +21,16 @@ Optional **native black-and-white preprocess** (`manipulateColors`, default `fal
 
 ## Install
 
-Published privately to **GitHub Packages** as `@ali-aref/rn-af-identity-ocr` (not npmjs.com).
-
-### Auth (local)
-
-1. Create a classic PAT with `read:packages` (and `write:packages` if you publish).
-2. Export it (do not commit the token):
-
 ```bash
-export GITHUB_TOKEN=ghp_your_token_here
-```
-
-3. Put the scope registry in the **project** `.npmrc` (safe to commit):
-
-```ini
-@ali-aref:registry=https://npm.pkg.github.com
-```
-
-4. Put the token in your **user** `~/.npmrc` (never commit this):
-
-```ini
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-(`pnpm` will not expand `${GITHUB_TOKEN}` from a project-level `.npmrc`.)
-
-Public packages (`react`, `expo`, etc.) still resolve from npmjs.org.
-
-### Add the dependency
-
-```bash
-pnpm add @ali-aref/rn-af-identity-ocr
+npx expo install rn-af-identity-ocr
+# or
+pnpm add rn-af-identity-ocr
 ```
 
 ```json
 {
   "expo": {
-    "plugins": ["@ali-aref/rn-af-identity-ocr"]
+    "plugins": ["rn-af-identity-ocr"]
   }
 }
 ```
@@ -81,7 +54,7 @@ import {
   scanETazkiraBack,
   scanPaperTazkira,
   scanPassport,
-} from '@ali-aref/rn-af-identity-ocr';
+} from 'rn-af-identity-ocr';
 
 const front = await scanETazkiraFront(imageUri);
 console.log(front.documentType); // 'e_tazkira_front'
@@ -223,26 +196,13 @@ pnpm test
 
 Repo: [Ali-Aref/rn-af-identity-ocr](https://github.com/Ali-Aref/rn-af-identity-ocr).
 
-### Publish (GitHub Packages)
+### Publish (npm)
 
 ```bash
-export GITHUB_TOKEN=ghp_...   # classic PAT: write:packages + read:packages + repo
-pnpm pack --dry-run           # verify allowlist (build + android/src + ios; no src/)
+npm login
+pnpm pack --dry-run   # verify allowlist (build + android/src + ios; no src/)
 pnpm publish
 ```
-
-Package stays private when this GitHub repo is private. Do **not** publish to npmjs.com.
-
-### Install in CI (consumer repos)
-
-```yaml
-- run: |
-    echo "@ali-aref:registry=https://npm.pkg.github.com" >> .npmrc
-    echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
-- run: pnpm install
-```
-
-Same-user private repos can use `secrets.GITHUB_TOKEN`. Otherwise use a PAT secret with `read:packages` + `repo`.
 
 ---
 

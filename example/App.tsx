@@ -19,7 +19,7 @@ import {
   scanPassport,
   type AfDocumentType,
   type ScanResult,
-} from '@ali-aref/rn-af-identity-ocr';
+} from 'rn-af-identity-ocr';
 
 const DOC_OPTIONS: { type: AfDocumentType; label: string; scan: (uri: string) => Promise<ScanResult> }[] =
   [
@@ -107,7 +107,7 @@ export default function App() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.header}>@ali-aref/rn-af-identity-ocr</Text>
+        <Text style={styles.header}>rn-af-identity-ocr</Text>
         <Text style={styles.sub}>
           Dual-engine OCR (PP-OCR Persian/Pashto / ML Kit·Vision Latin) with optional
           native B&W. Pick a document type, then gallery or camera. Rebuild native after
