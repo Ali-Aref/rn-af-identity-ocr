@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name           = 'RnAfIdentityOcr'
-  s.version        = '0.1.0'
+  s.version        = '0.1.1'
   s.summary        = 'On-device OCR for Afghan identity documents (ML Kit/Vision + PP-OCR)'
   s.description    = 'Latin OCR via Vision and Arabic-script OCR via PP-OCRv5 ONNX, with optional B&W preprocess'
   s.author         = 'Ali Aref'
@@ -18,13 +18,15 @@ Pod::Spec.new do |s|
 
   s.pod_target_xcconfig = {
     'DEFINES_MODULE' => 'YES',
-    'SWIFT_OBJC_BRIDGING_HEADER' => '$(PODS_TARGET_SRCROOT)/RnAfIdentityOcr-Bridging-Header.h',
     'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES' => 'YES',
   }
 
   s.source_files = "**/*.{h,m,mm,swift,hpp,cpp}"
   s.exclude_files = ["RnAfIdentityOcr-Bridging-Header.h", "Resources/**"]
-  s.private_header_files = "AfOrtRunner.h"
+  # This pod is built as a framework. Public Objective-C headers are imported
+  # into Swift through CocoaPods' generated umbrella header; a bridging header
+  # is app-target configuration and is unreliable for framework pods.
+  s.public_header_files = "AfOrtRunner.h"
   # PP-OCRv5 mobile det (~4.7 MB) + arabic rec (~7.7 MB) + charset dict.
   s.resources = ['models/*']
 end

@@ -8,4 +8,4 @@ function withRnAfIdentityOcr(config) {
   return config;
 }
 
-module.exports = createRunOncePlugin(withRnAfIdentityOcr, 'rn-af-identity-ocr', '0.1.0');
+module.exports = createRunOncePlugin(withRnAfIdentityOcr, 'rn-af-identity-ocr', '0.1.1');
