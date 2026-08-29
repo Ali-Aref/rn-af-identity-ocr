@@ -1,6 +1,6 @@
 {
   "name": "rn-af-identity-ocr",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "On-device Expo OCR for Afghan identity documents (ML Kit/Vision + PP-OCR, optional B&W preprocess)",
   "main": "build/index.js",
   "types": "build/index.d.ts",

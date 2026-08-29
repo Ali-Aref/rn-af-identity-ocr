@@ -1,5 +1,11 @@
 #import "AfOrtRunner.h"
-#import <onnxruntime.h>
+#if __has_include("onnxruntime.h")
+#import "onnxruntime.h"
+#elif __has_include("onnxruntime-objc/onnxruntime.h")
+#import "onnxruntime-objc/onnxruntime.h"
+#else
+#error "onnxruntime-objc headers not found"
+#endif
 
 @implementation AfOrtRunner {
   ORTEnv *_env;
