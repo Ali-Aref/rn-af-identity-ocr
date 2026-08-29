@@ -63,7 +63,25 @@ See `src/mrz/locate.ts` and `src/mrz/parse.ts`.
 
 There is no tessdata download flow. Latin coverage is fixed by ML Kit / Vision. Arabic coverage is fixed by the bundled PP-OCR arabic rec model and dict. Extending scripts means swapping or fine-tuning those models in a fork — not adding `.traineddata` packs.
 
+## Live photo face validation
+
+`validateLivePhotoFace` is separate from document OCR. It answers: “does this image contain at least one face?”
+
+| Platform | API | Notes |
+|----------|-----|-------|
+| Android | ML Kit `FaceDetection` (`com.google.mlkit:face-detection`) | Fast mode, min face size 15% of frame; bundled model (~6 MB) |
+| iOS | `VNDetectFaceRectanglesRequest` | Uses observation confidence vs `minConfidence` (default 0.5) |
+
+Flow:
+
+1. Load image from local URI (EXIF orientation respected on iOS)
+2. Run native face detector
+3. Return `status: 'face'` when at least one face passes, else `'no_face'`
+4. Include optional primary-face `confidence` and normalized `box`
+
+This is **not** liveness detection, face matching, or anti-spoofing — only on-device face presence.
+
 ## See also
 
-- [README.md](../README.md) — install, scan APIs, troubleshooting
+- [README.md](../README.md) — install, scan APIs, face validation, troubleshooting
 - [assets/models/README.md](../assets/models/README.md)

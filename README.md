@@ -5,6 +5,7 @@ On-device OCR for **Afghan identity documents** in React Native / Expo:
 - e-Tazkira front / back
 - Paper Tazkira
 - Afghan passport
+- **Live photo face validation** (signup / liveness-style checks)
 
 Uses the same dual-engine approach as `af-identity-scanner`:
 
@@ -42,7 +43,7 @@ npx expo run:android
 npx expo run:ios
 ```
 
-Bundled assets: PP-OCR det + arabic rec ONNX models (~12 MB) and charset dict. Latin models come from ML Kit / system Vision.
+Bundled assets: PP-OCR det + arabic rec ONNX models (~12 MB) and charset dict. Latin models come from ML Kit / system Vision. Face detection uses ML Kit Face Detection on Android (~6 MB bundled model) and Apple Vision on iOS.
 
 ---
 
@@ -54,6 +55,7 @@ import {
   scanETazkiraBack,
   scanPaperTazkira,
   scanPassport,
+  validateLivePhotoFace,
 } from 'rn-af-identity-ocr';
 
 const front = await scanETazkiraFront(imageUri);
@@ -62,6 +64,10 @@ console.log(front.scriptUsed);   // 'persian'
 console.log(front.engine);       // 'ppocr'
 console.log(front.fullText);
 console.log(front.processedImageUri); // file://… after downscale / optional B&W
+
+const livePhoto = await validateLivePhotoFace(selfieUri);
+console.log(livePhoto.status);    // 'face' | 'no_face'
+console.log(livePhoto.faceCount); // 1 when a face is detected
 
 const passport = await scanPassport(imageUri);
 console.log(passport.mrz?.fields.surname?.normalizedValue);
@@ -89,6 +95,7 @@ Each scanner:
 | `scanETazkiraBack(uri, options?)` | `e_tazkira_back` | `latin` (ML Kit / Vision) |
 | `scanPaperTazkira(uri, options?)` | `paper_tazkira` | `persian` (PP-OCR arabic-family) |
 | `scanPassport(uri, options?)` | `passport` | `latin` (ML Kit / Vision) |
+| `validateLivePhotoFace(uri, options?)` | — | face detection (ML Kit / Vision) |
 
 ### `ScanOptions`
 
@@ -100,6 +107,33 @@ Each scanner:
 await scanETazkiraFront(uri, { manipulateColors: true });
 await scanPassport(uri, { manipulateColors: true });
 ```
+
+### `FaceValidationOptions`
+
+| Option | Default | Meaning |
+|--------|---------|---------|
+| `minConfidence` | `0.5` | Minimum primary-face confidence (0–1). Used on iOS; Android treats any detected face as valid. |
+
+```ts
+const result = await validateLivePhotoFace(uri, { minConfidence: 0.6 });
+if (result.status === 'face') {
+  // keep image for upload
+}
+```
+
+### `FaceValidationResult`
+
+```ts
+type FaceValidationResult = {
+  status: 'face' | 'no_face';
+  faceCount: number;
+  confidence?: number; // primary face, 0–1 when available
+  box?: { x: number; y: number; width: number; height: number }; // normalized 0–1
+  durationMs: number;
+};
+```
+
+Use after capturing a portrait / live photo (typically front camera). This is **face detection**, not liveness or anti-spoofing.
 
 ### `ScanResult`
 
@@ -124,7 +158,7 @@ type DocumentMrz = Td1Mrz | Td3Mrz;
 // PassportMrz is a deprecated alias of DocumentMrz.
 ```
 
-Also exported: `normalizePersoArabicText`, `locateMrz`, `parseMrz`, types.
+Also exported: `validateLivePhotoFace`, `normalizePersoArabicText`, `locateMrz`, `parseMrz`, types.
 
 `imageUri` must be a local `file://` or `content://` URI.
 
@@ -166,11 +200,11 @@ Pick a document type, then Gallery or Camera, then **Scan**. The result shows th
 
 ## Platform notes
 
-| Platform | Latin | Arabic | Preprocess |
-|----------|-------|--------|------------|
-| Android | ML Kit Text Recognition (bundled) | PP-OCRv5 via ONNX Runtime | Optional B&W |
-| iOS | Apple Vision (`.accurate`) | PP-OCRv5 via onnxruntime-objc | Optional B&W |
-| Web | — | — | Unsupported |
+| Platform | Latin | Arabic | Face | Preprocess |
+|----------|-------|--------|------|------------|
+| Android | ML Kit Text Recognition (bundled) | PP-OCRv5 via ONNX Runtime | ML Kit Face Detection (bundled) | Optional B&W |
+| iOS | Apple Vision (`.accurate`) | PP-OCRv5 via onnxruntime-objc | `VNDetectFaceRectanglesRequest` | Optional B&W |
+| Web | — | — | — | Unsupported |
 
 ---
 
@@ -182,6 +216,7 @@ Pick a document type, then Gallery or Camera, then **Scan**. The result shows th
 | Missing PP-OCR models | Ensure `android/.../assets/models/` and `ios/models/` are present; rebuild native |
 | Poor OCR with B&W | Leave default (`manipulateColors` off) or pass `{ manipulateColors: false }` |
 | Could not load/decode image | Use `file://` / `content://` from a picker |
+| No face detected on a clear selfie | Use front camera, good lighting; lower `minConfidence` on iOS if needed |
 | `property is not writable` | Clear Metro cache; example metro pins a single Expo singleton |
 
 ---
