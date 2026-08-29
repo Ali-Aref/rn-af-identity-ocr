@@ -59,6 +59,50 @@ public class RnAfIdentityOcrModule: Module {
       result["durationMs"] = Date().timeIntervalSince(started) * 1000
       return result
     }
+
+    AsyncFunction("detectFaceAsync") { (imageUri: String, options: [String: Any]) -> [String: Any?] in
+      let started = Date()
+      let minConfidence = (options["minConfidence"] as? Double) ?? 0.5
+      guard let url = Self.fileURL(from: imageUri) else {
+        throw OcrException("Invalid image URI: \(imageUri)")
+      }
+      guard let image = UIImage(contentsOfFile: url.path), let cgImage = image.cgImage else {
+        throw OcrException("Failed to load image at \(imageUri)")
+      }
+
+      let orientation = CGImagePropertyOrientation(image.imageOrientation)
+      let (width, height) = Self.orientedSize(
+        width: cgImage.width,
+        height: cgImage.height,
+        orientation: orientation
+      )
+
+      let request = VNDetectFaceRectanglesRequest()
+      let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
+      try handler.perform([request])
+
+      let observations = request.results ?? []
+      let primary = observations.max(by: { $0.boundingBox.area < $1.boundingBox.area })
+      let confidence = Double(primary?.confidence ?? 0)
+      let hasFace = !observations.isEmpty && confidence >= minConfidence
+
+      var result: [String: Any?] = [
+        "status": hasFace ? "face" : "no_face",
+        "faceCount": observations.count,
+        "durationMs": Date().timeIntervalSince(started) * 1000,
+      ]
+      if let primary, hasFace {
+        result["confidence"] = confidence
+        let box = primary.boundingBox
+        result["box"] = [
+          "x": Double(box.origin.x),
+          "y": Double(1.0 - box.origin.y - box.height),
+          "width": Double(box.width),
+          "height": Double(box.height),
+        ]
+      }
+      return result
+    }
   }
 
   /// Same path as af-identity-scanner Latin OCR.
@@ -273,4 +317,8 @@ private extension CGImagePropertyOrientation {
     @unknown default: self = .up
     }
   }
+}
+
+private extension CGRect {
+  var area: CGFloat { width * height }
 }

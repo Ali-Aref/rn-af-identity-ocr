@@ -6,6 +6,8 @@ import android.graphics.Color
 import android.graphics.Rect
 import android.net.Uri
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import com.google.mlkit.vision.text.Text
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -24,6 +26,16 @@ import kotlin.math.roundToInt
 class RnAfIdentityOcrModule : Module() {
   private val latinRecognizer by lazy {
     TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+  }
+
+  private val faceDetector by lazy {
+    val options = FaceDetectorOptions.Builder()
+      .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+      .setLandmarkMode(FaceDetectorOptions.LANDMARK_MODE_NONE)
+      .setClassificationMode(FaceDetectorOptions.CLASSIFICATION_MODE_NONE)
+      .setMinFaceSize(0.15f)
+      .build()
+    FaceDetection.getClient(options)
   }
 
   private val arabicExecutor = Executors.newSingleThreadExecutor()
@@ -95,6 +107,49 @@ class RnAfIdentityOcrModule : Module() {
           )
         }
       }
+    }
+
+    AsyncFunction("detectFaceAsync") { imageUri: String, _options: Map<String, Any?>, promise: Promise ->
+      val started = System.currentTimeMillis()
+      val context = appContext.reactContext
+      if (context == null) {
+        promise.reject("ERR_REACT_CONTEXT", "React context is unavailable", null)
+        return@AsyncFunction
+      }
+
+      val image = try {
+        InputImage.fromFilePath(context, Uri.parse(imageUri))
+      } catch (e: Exception) {
+        promise.reject("ERR_IMAGE_LOAD", "Failed to load image at $imageUri: ${e.message}", e)
+        return@AsyncFunction
+      }
+
+      val width = image.width
+      val height = image.height
+      if (width <= 0 || height <= 0) {
+        promise.reject("ERR_IMAGE_LOAD", "Image has invalid dimensions: ${width}x${height}", null)
+        return@AsyncFunction
+      }
+
+      faceDetector
+        .process(image)
+        .addOnSuccessListener { faces ->
+          val primary = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
+          val hasFace = faces.isNotEmpty()
+          val result = mutableMapOf<String, Any?>(
+            "status" to if (hasFace) "face" else "no_face",
+            "faceCount" to faces.size,
+            "durationMs" to (System.currentTimeMillis() - started).toDouble()
+          )
+          if (primary != null && hasFace) {
+            result["confidence"] = 1.0
+            result["box"] = normalizeBox(primary.boundingBox, width, height)
+          }
+          promise.resolve(result)
+        }
+        .addOnFailureListener { e ->
+          promise.reject("ERR_FACE", "Face detection failed: ${e.message}", e)
+        }
     }
   }
 

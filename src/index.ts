@@ -1,5 +1,7 @@
 import type {
   AfDocumentType,
+  FaceValidationOptions,
+  FaceValidationResult,
   NativeOcrResult,
   NativeRecognizedLine,
   OcrBlock,
@@ -132,11 +134,23 @@ export function scanPassport(imageUri: string, options?: ScanOptions): Promise<S
   return recognizeForDocument(imageUri, 'passport', options);
 }
 
+export async function validateLivePhotoFace(
+  imageUri: string,
+  options?: FaceValidationOptions
+): Promise<FaceValidationResult> {
+  if (!imageUri || typeof imageUri !== 'string') {
+    throw new Error('rn-af-identity-ocr: imageUri must be a non-empty string');
+  }
+
+  return getRnAfIdentityOcrModule().detectFaceAsync(imageUri, options ?? {});
+}
+
 const RnAfIdentityOcr = {
   scanETazkiraFront,
   scanETazkiraBack,
   scanPaperTazkira,
   scanPassport,
+  validateLivePhotoFace,
   normalizePersoArabicText,
 };
 

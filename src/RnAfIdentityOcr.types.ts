@@ -150,3 +150,24 @@ export type ScanOptions = {
   /** Native grayscale+threshold before OCR. Default `false`. */
   manipulateColors?: boolean;
 };
+
+export type FaceValidationStatus = 'face' | 'no_face';
+
+export type FaceBox = NativeNormalizedBox;
+
+export type FaceValidationOptions = {
+  /** Minimum detection confidence 0..1. Default `0.5`. */
+  minConfidence?: number;
+};
+
+export type FaceValidationResult = {
+  status: FaceValidationStatus;
+  faceCount: number;
+  /** Primary face confidence 0..1 when available. */
+  confidence?: number;
+  /** Normalized 0..1 box of the primary face (top-left origin). */
+  box?: FaceBox;
+  durationMs: number;
+};
+
+export type NativeFaceValidationResult = FaceValidationResult;

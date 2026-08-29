@@ -25,6 +25,8 @@ android {
 dependencies {
   // Bundled Latin OCR (~4 MB / ABI). Works without Google Play Services.
   implementation "com.google.mlkit:text-recognition:16.0.1"
+  // Live-photo face validation (~6 MB bundled model).
+  implementation "com.google.mlkit:face-detection:16.1.7"
   // PP-OCRv5 arabic detection + recognition (~12 MB models in assets/).
   implementation "com.microsoft.onnxruntime:onnxruntime-android:1.20.0"
 }

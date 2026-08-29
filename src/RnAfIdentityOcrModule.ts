@@ -1,9 +1,18 @@
 import { requireNativeModule } from 'expo';
 
-import type { NativeOcrResult, NativeRecognizeOptions } from './RnAfIdentityOcr.types';
+import type {
+  FaceValidationOptions,
+  NativeFaceValidationResult,
+  NativeOcrResult,
+  NativeRecognizeOptions,
+} from './RnAfIdentityOcr.types';
 
 type RnAfIdentityOcrNativeModule = {
   recognizeAsync(imageUri: string, options: NativeRecognizeOptions): Promise<NativeOcrResult>;
+  detectFaceAsync(
+    imageUri: string,
+    options?: FaceValidationOptions
+  ): Promise<NativeFaceValidationResult>;
 };
 
 let nativeModule: RnAfIdentityOcrNativeModule | null = null;
