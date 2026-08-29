@@ -34,11 +34,13 @@ final class ArabicOcrEngine {
       )
     }
 
-    var error: NSError?
-    guard let runner = AfOrtRunner(detPath: detPath, recPath: recPath, error: &error) else {
+    let runner: AfOrtRunner
+    do {
+      runner = try AfOrtRunner(detPath: detPath, recPath: recPath)
+    } catch {
       throw Exception(
         name: "ERR_OCR",
-        description: error?.localizedDescription ?? "Failed to load ONNX sessions.",
+        description: error.localizedDescription,
         code: "ERR_OCR"
       )
     }
@@ -99,9 +101,11 @@ final class ArabicOcrEngine {
     let scaleH = Float(netH) / Float(height)
 
     let nchw = Self.makeNchw(rgb: rgb, srcW: width, srcH: height, dstW: netW, dstH: netH)
-    var error: NSError?
-    guard let heatmap = runner.runDet(withNchw: nchw, height: Int32(netH), width: Int32(netW), error: &error) else {
-      throw Exception(name: "ERR_OCR", description: error?.localizedDescription ?? "Detection failed.", code: "ERR_OCR")
+    let heatmap: Data
+    do {
+      heatmap = try runner.runDet(withNchw: nchw, height: Int32(netH), width: Int32(netW))
+    } catch {
+      throw Exception(name: "ERR_OCR", description: error.localizedDescription, code: "ERR_OCR")
     }
 
     let count = netW * netH
@@ -137,16 +141,17 @@ final class ArabicOcrEngine {
     let nchw = Self.makeNchw(rgb: rgb, srcW: width, srcH: height, dstW: targetW, dstH: targetH)
     var timeSteps: Int32 = 0
     var classes: Int32 = 0
-    var error: NSError?
-    guard let logitsData = runner.runRec(
-      withNchw: nchw,
-      height: Int32(targetH),
-      width: Int32(targetW),
-      outTimeSteps: &timeSteps,
-      outClasses: &classes,
-      error: &error
-    ) else {
-      throw Exception(name: "ERR_OCR", description: error?.localizedDescription ?? "Recognition failed.", code: "ERR_OCR")
+    let logitsData: Data
+    do {
+      logitsData = try runner.runRec(
+        withNchw: nchw,
+        height: Int32(targetH),
+        width: Int32(targetW),
+        outTimeSteps: &timeSteps,
+        outClasses: &classes
+      )
+    } catch {
+      throw Exception(name: "ERR_OCR", description: error.localizedDescription, code: "ERR_OCR")
     }
 
     let t = Int(timeSteps)
