@@ -60,22 +60,14 @@ public class RnAfIdentityOcrModule: Module {
       return result
     }
 
-    AsyncFunction("detectFaceAsync") { (imageUri: String, options: [String: Any]) -> [String: Any?] in
+    AsyncFunction("detectFaceAsync") { (imageUri: String, options: [String: Any]?) -> [String: Any?] in
       let started = Date()
-      let minConfidence = (options["minConfidence"] as? Double) ?? 0.5
-      guard let url = Self.fileURL(from: imageUri) else {
-        throw OcrException("Invalid image URI: \(imageUri)")
-      }
-      guard let image = UIImage(contentsOfFile: url.path), let cgImage = image.cgImage else {
-        throw OcrException("Failed to load image at \(imageUri)")
+      let image = try self.loadImage(from: imageUri)
+      guard let cgImage = image.cgImage else {
+        throw OcrException("Failed to get CGImage for face detection")
       }
 
       let orientation = CGImagePropertyOrientation(image.imageOrientation)
-      let (width, height) = Self.orientedSize(
-        width: cgImage.width,
-        height: cgImage.height,
-        orientation: orientation
-      )
 
       let request = VNDetectFaceRectanglesRequest()
       let handler = VNImageRequestHandler(cgImage: cgImage, orientation: orientation, options: [:])
@@ -84,7 +76,7 @@ public class RnAfIdentityOcrModule: Module {
       let observations = request.results ?? []
       let primary = observations.max(by: { $0.boundingBox.area < $1.boundingBox.area })
       let confidence = Double(primary?.confidence ?? 0)
-      let hasFace = !observations.isEmpty && confidence >= minConfidence
+      let hasFace = !observations.isEmpty
 
       var result: [String: Any?] = [
         "status": hasFace ? "face" : "no_face",
@@ -93,12 +85,11 @@ public class RnAfIdentityOcrModule: Module {
       ]
       if let primary, hasFace {
         result["confidence"] = confidence
-        let box = primary.boundingBox
         result["box"] = [
-          "x": Double(box.origin.x),
-          "y": Double(1.0 - box.origin.y - box.height),
-          "width": Double(box.width),
-          "height": Double(box.height),
+          "x": Double(primary.boundingBox.origin.x),
+          "y": Double(1.0 - primary.boundingBox.origin.y - primary.boundingBox.height),
+          "width": Double(primary.boundingBox.width),
+          "height": Double(primary.boundingBox.height),
         ]
       }
       return result

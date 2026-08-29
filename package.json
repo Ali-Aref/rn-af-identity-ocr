@@ -1,6 +1,6 @@
 {
   "name": "rn-af-identity-ocr",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "On-device Expo OCR for Afghan identity documents (ML Kit/Vision + PP-OCR, optional B&W preprocess)",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -9,6 +9,7 @@
     "build/**/*.js",
     "build/**/*.d.ts",
     "android/build.gradle",
+    "android/proguard-rules.pro",
     "android/src",
     "ios",
     "app.plugin.js",

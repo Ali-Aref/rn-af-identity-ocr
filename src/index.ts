@@ -142,7 +142,14 @@ export async function validateLivePhotoFace(
     throw new Error('rn-af-identity-ocr: imageUri must be a non-empty string');
   }
 
-  return getRnAfIdentityOcrModule().detectFaceAsync(imageUri, options ?? {});
+  const mod = getRnAfIdentityOcrModule();
+  if (typeof mod.detectFaceAsync !== 'function') {
+    throw new Error(
+      'rn-af-identity-ocr: detectFaceAsync is unavailable. Rebuild the native app after upgrading the package.'
+    );
+  }
+
+  return mod.detectFaceAsync(imageUri, options ?? {});
 }
 
 const RnAfIdentityOcr = {

@@ -109,7 +109,7 @@ class RnAfIdentityOcrModule : Module() {
       }
     }
 
-    AsyncFunction("detectFaceAsync") { imageUri: String, _options: Map<String, Any?>, promise: Promise ->
+    AsyncFunction("detectFaceAsync") { imageUri: String, _options: Map<String, Any?>?, promise: Promise ->
       val started = System.currentTimeMillis()
       val context = appContext.reactContext
       if (context == null) {
@@ -117,16 +117,23 @@ class RnAfIdentityOcrModule : Module() {
         return@AsyncFunction
       }
 
+      var bitmap: Bitmap? = null
       val image = try {
-        InputImage.fromFilePath(context, Uri.parse(imageUri))
-      } catch (e: Exception) {
-        promise.reject("ERR_IMAGE_LOAD", "Failed to load image at $imageUri: ${e.message}", e)
-        return@AsyncFunction
+        val normalized = normalizeUri(imageUri)
+        InputImage.fromFilePath(context, Uri.parse(normalized))
+      } catch (_: Exception) {
+        bitmap = loadBitmap(imageUri)
+          ?: run {
+            promise.reject("ERR_IMAGE_LOAD", "Could not decode image at uri: $imageUri", null)
+            return@AsyncFunction
+          }
+        InputImage.fromBitmap(bitmap, 0)
       }
 
       val width = image.width
       val height = image.height
       if (width <= 0 || height <= 0) {
+        bitmap?.recycle()
         promise.reject("ERR_IMAGE_LOAD", "Image has invalid dimensions: ${width}x${height}", null)
         return@AsyncFunction
       }
@@ -134,6 +141,7 @@ class RnAfIdentityOcrModule : Module() {
       faceDetector
         .process(image)
         .addOnSuccessListener { faces ->
+          bitmap?.takeIf { !it.isRecycled }?.recycle()
           val primary = faces.maxByOrNull { it.boundingBox.width() * it.boundingBox.height() }
           val hasFace = faces.isNotEmpty()
           val result = mutableMapOf<String, Any?>(
@@ -148,9 +156,15 @@ class RnAfIdentityOcrModule : Module() {
           promise.resolve(result)
         }
         .addOnFailureListener { e ->
+          bitmap?.takeIf { !it.isRecycled }?.recycle()
           promise.reject("ERR_FACE", "Face detection failed: ${e.message}", e)
         }
     }
+  }
+
+  private fun normalizeUri(imageUri: String): String {
+    if (imageUri.startsWith("/")) return "file://$imageUri"
+    return imageUri
   }
 
   private data class PreparedImage(
