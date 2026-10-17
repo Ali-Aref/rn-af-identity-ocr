@@ -226,10 +226,11 @@ public class RnAfIdentityOcrModule: Module {
     for y in 0..<height {
       for x in 0..<width {
         let i = y * bytesPerRow + x * bytesPerPixel
-        let gray = UInt8(
-          (0.299 * Double(pixels[i]) + 0.587 * Double(pixels[i + 1]) + 0.114 * Double(pixels[i + 2]))
-            .rounded()
-        )
+        let red: Double = Double(pixels[i])
+        let green: Double = Double(pixels[i + 1])
+        let blue: Double = Double(pixels[i + 2])
+        let luminance: Double = 0.299 * red + 0.587 * green + 0.114 * blue
+        let gray = UInt8(luminance.rounded())
         let v: UInt8 = gray < cut ? 0 : 255
         pixels[i] = v
         pixels[i + 1] = v

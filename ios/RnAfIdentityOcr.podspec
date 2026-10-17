@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name           = 'RnAfIdentityOcr'
-  s.version        = '0.1.3'
+  s.version        = '0.1.7'
   s.summary        = 'On-device OCR for Afghan identity documents (ML Kit/Vision + PP-OCR)'
   s.description    = 'Latin OCR via Vision and Arabic-script OCR via PP-OCRv5 ONNX, with optional B&W preprocess'
   s.author         = 'Ali Aref'
